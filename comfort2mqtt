@@ -1,0 +1,455 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use FindBin qw ($Bin);
+use lib $Bin;
+
+use Proc::Daemon;
+use POSIX;
+use Time::HiRes qw ( gettimeofday );
+use Comfort::Serial;
+use Net::MQTT::Simple;
+
+use constant COMFORT_PORT => '/dev/ttyUSB0';
+use constant COMFORT_RECEIVE_TIMEOUT => 100;
+use constant PASSWORD => '0000';
+use constant MQTT_HOST => 'localhost';
+use constant MQTT_COMFORT_PUBLISH_TOPIC => "comfort/status";
+use constant MQTT_COMFORT_SUBSCRIBE_TOPIC1 => "comfort/set";
+use constant MQTT_COMFORT_SUBSCRIBE_TOPIC2 => "comfort/get";
+use constant MQTT_CBUS_PUBLISH_TOPIC => "cbus/status";
+use constant MQTT_CBUS_SUBSCRIBE_TOPIC1 => "cbus/set";
+use constant MQTT_CBUS_SUBSCRIBE_TOPIC2 => "cbus/get";
+use constant MQTT_TICK_TIMEOUT => 100;
+
+$0 = 'comfort2mqtt';
+
+our $daemon = 0;
+our $comfortPort;
+our $mqttHost;
+our $logFileName;
+while (my $arg = shift @ARGV)
+{
+	if ($arg eq '-d')
+	{
+		$daemon = 1;
+	}
+	elsif ($arg eq '-port')
+	{
+		$comfortPort = shift @ARGV;
+	}
+	elsif ($arg eq '-log')
+	{
+		$logFileName = shift @ARGV;
+	}
+	elsif ($arg eq '-m')
+	{
+		$mqttHost = shift @ARGV;
+	}
+}
+
+
+$comfortPort //= COMFORT_PORT;
+$mqttHost //= MQTT_HOST;
+our %RETAIN_INPUT =
+(
+	 9 => 1,
+	27 => 1,
+);
+
+
+our $comfort = Comfort::Serial->new ($comfortPort);
+our %rampLookup =
+(
+	0  => $comfort->CBUS_RAMP_0,
+	4  => $comfort->CBUS_RAMP_8,
+	8  => $comfort->CBUS_RAMP_8,
+	12 => $comfort->CBUS_RAMP_12,
+	20 => $comfort->CBUS_RAMP_20,
+	30 => $comfort->CBUS_RAMP_30,
+	40 => $comfort->CBUS_RAMP_40,
+	60 => $comfort->CBUS_RAMP_60,
+);
+
+our %OUTPUT_STATUS =
+(
+	'OFF' => $comfort->COMFORT_OUTPUT_OFF,
+	'ON' => $comfort->COMFORT_OUTPUT_ON,
+	'TOGGLE' => $comfort->COMFORT_OUTPUT_TOGGLE,
+	'PULSE' => $comfort->COMFORT_OUTPUT_PULSE,
+	'FLASH' => $comfort->COMFORT_OUTPUT_FLASH,
+);
+
+our %REPORT_TOPIC =
+(
+	'a?'   => 'alarm_info',
+	'AL'   => 'alarm_type',
+	'A?'   => 'analog_input',
+	'AC'   => 'alarm_code',
+	'AM'   => 'alarm',
+	'AR'   => 'alarm_restored',
+	'BP'   => 'beep',
+	'BY'   => 'bypass',
+	'B?'   => 'bypass_all',
+	'CS'   => 'rs485_status',
+	'CT'   => 'counter',
+	'C?'   => 'counter',
+	'DB'   => 'doorbell',
+	'DT'   => 'date',
+	'ER'   => 'arm',
+	'EV'   => 'event',
+	'EX'   => 'exit_entry_delay',
+	'FL'   => 'flag',
+	'F?'   => 'flag',
+	'IP'   => 'input',
+	'IR'   => 'infrared',
+	'IX'   => 'irfrared_code',
+	'KL'   => 'led',
+	'K?'   => 'led',
+	'LB'   => 'low_battery',
+	'LR'   => 'login',
+	'MD'   => 'mode',
+	'M?'   => 'mode',
+	'OP'   => 'output',
+	'O?'   => 'output',
+	'PT'   => 'pulse',
+	'PS'   => 'engineer_code',
+);
+
+
+$comfort->SetLogger (\&ComfortLogger);
+if ($daemon)
+{
+	Proc::Daemon::Init ({
+		work_dir => $Bin,
+		child_STDOUT => ($logFileName ? $logFileName : '/dev/null')
+		});
+}
+elsif ($logFileName)
+{
+	open (STDOUT, '>>', $logFileName) or die "Could not open $logFileName: @!";
+}
+
+$| = 1;
+
+
+our $mqtt = Net::MQTT::Simple->new ($mqttHost);
+$mqtt->subscribe (MQTT_COMFORT_SUBSCRIBE_TOPIC1 . '/#', \&MqttComfortCallback);
+$mqtt->subscribe (MQTT_COMFORT_SUBSCRIBE_TOPIC2 . '/#', \&MqttComfortCallback);
+$mqtt->subscribe (MQTT_CBUS_SUBSCRIBE_TOPIC1 . '/#', \&MqttCbusCallback);
+$mqtt->subscribe (MQTT_CBUS_SUBSCRIBE_TOPIC2 . '/#', \&MqttCbusCallback);
+
+
+our $connected = 0;
+our $reportsEnabled = 0;
+our $loggedIn = 0;
+
+sub Print (@)
+{
+	my ($secs, $usecs) = gettimeofday();
+	print POSIX::strftime("%Y/%m/%d %H:%M:%S", localtime ($secs)), '.', sprintf ('%03d', int ($usecs/1000)), ' ', @_, "\n";
+}
+
+our $terminated = 0;
+$SIG{INT} = $SIG{QUIT} = $SIG{TERM} = sub
+{
+	Print "Termination signal recived...";
+	$terminated = 1;
+};
+
+while (! $terminated)
+{
+	if (! $connected)
+	{
+		$loggedIn = 0;
+
+		Print "Connecting to ", MQTT_HOST, " ...";
+		if (! $comfort->Connect())
+		{
+			Print "Coult no connect.  Retrying ...";
+			sleep (1);
+			next;
+		}
+
+		$connected = 1;
+	}
+
+	if (! $loggedIn)
+	{
+		Print "Logging in ...";
+		if (! $comfort->Login (PASSWORD))
+		{
+			Print "Could not login.  Retrying ...";
+			sleep (1);
+			next;
+		}
+
+		$loggedIn = 1;
+	}
+
+	if (! $reportsEnabled)
+	{
+		if (! $comfort->EnableReports (\&ComfortResultHandler))
+		{
+			Print "Could not enable reports.  Reconnecting ...";
+			$comfort->Disconnect();
+			$connected = 0;
+			next;
+		}
+
+		$comfort->SetReportCallback ('CT', \&ComfortCTHandler);
+		$comfort->SetReportCallback ('C?', \&ComfortCTHandler);
+		$comfort->SetReportCallback ('IP', \&ComfortIPHandler);
+		$reportsEnabled = 1;
+	}
+
+	my ($msg, $type) = $comfort->Receive (COMFORT_RECEIVE_TIMEOUT);
+	if ($msg && $msg ne 'OK')
+	{
+		Print "Got: [$type, $msg]";
+		&ComfortResultHandler ($type, $msg);
+	}
+
+	if (! $terminated)
+	{
+		$mqtt->tick (MQTT_TICK_TIMEOUT/1000.0);
+	}
+}
+
+Print "Terminating ...";
+
+$comfort->Logout();
+$comfort->Disconnect();
+
+Print "Terminated.";
+
+exit 0;
+
+
+sub MqttComfortCallback
+{
+	my ($topic, $msg) = @_;
+
+	my $result = '';
+	my ($t1, $op, @params) = split (/\//, $topic);
+	my $cmd = pop @params;
+	my $n = scalar (@params);
+
+	Print "Received MQTT COMFORT msg: $topic:$msg ($op: $cmd [@params]";
+	if ($op eq 'set')
+	{
+		if ($cmd eq 'login' && $n == 0)
+		{
+			$comfort->Logout();
+			if (! ($result = $comfort->Login ($msg)))
+			{
+				$loggedIn = 0;
+			}
+		}
+		elsif ($cmd eq 'logout' && $n == 0)
+		{
+			$result = $comfort->Logout();
+			$loggedIn = 0;
+		}
+		elsif ($cmd eq 'key' && $n == 0)
+		{
+			$result = $comfort->SendKey ($msg);
+		}
+		elsif ($cmd eq 'output' && $n == 1)
+		{
+			my ( $output ) = @params;
+			Print "Received output request for $output = $msg";
+			if (exists ($OUTPUT_STATUS{uc ($msg)}))
+			{
+				$result = $comfort->SetOutput ($output, $OUTPUT_STATUS{uc ($msg)});
+			}
+			else
+			{
+				Print ("Unknown output msg: $msg");
+			}
+		}
+		else
+		{
+			$result = $comfort->Send ($msg);
+		}
+	}
+
+	if (! defined ($result))
+	{
+		Print $comfort->GetLastErrorMsg();
+	}
+}
+
+
+
+sub MqttCbusCallback
+{
+	my ($topic, $value) = @_;
+	my ($t1, $op, $app, $group, $cmd) = split (/\//, $topic, 5);
+	Print "Received MQTT CBUS msg: $topic=$value: app = $app, group = $group";
+
+	if ($op eq 'set')
+	{
+		my $level = $value;
+		{
+			no warnings 'numeric';
+			$level += 0;
+		}
+
+		my $cbusCmd = $comfort->CBUS_RAMP_OFF;
+		if ($app && $group && $cmd)
+		{
+			$value = uc ($value);
+			if ($value eq 'ON' || $value eq 'TRUE')
+			{
+				$level = 255;
+			}
+			elsif ($value eq 'OFF' || $value eq 'FALSE')
+			{
+				$level = 0;
+			}
+
+
+			if ($cmd eq 'switch')
+			{
+				if ($level > 0)
+				{
+					$level = 255;
+				}
+
+				if ($level > 0)
+				{
+					$cbusCmd = $comfort->CBUS_RAMP_ON;
+				}
+			}
+			elsif ($cmd eq 'ramp')
+			{
+				if ($level > 0)
+				{
+					$cbusCmd = $comfort->CBUS_RAMP_0;
+				}
+
+				if ($value =~ /,(\d+)$/)
+				{
+					if (exists $rampLookup{$1})
+					{
+						$cbusCmd = $rampLookup{$1};
+					}
+				}
+			}
+			else
+			{
+				return;
+			}
+
+			Print "Sending CBUS cmd to group $group, application $app: $level";
+			if (! $comfort->SendCbusCommand ($group, $cbusCmd, $level, $app))
+			{
+				Print $comfort->GetLastErrorMsg();
+			}
+		}
+	}
+	elsif ($op eq 'get')
+	{
+		if (($cmd eq 'level' || $cmd eq 'switch') && $app == $comfort->CBUS_APPLICATION_LIGHTING)
+		{
+			$comfort->Send ('C?'.sprintf ('%02X', $group));
+		}
+	}
+	else
+	{
+		Print "Unknown operation $op";
+	}
+}
+
+
+
+sub SendMqttMsg
+{
+	my ($topics, $key, $value, $retain) = @_;
+
+	my $topic = join ('/', @{$topics}, $key);
+	Print "Sending MQTT msg: $topic = $value";
+
+	if ($retain)
+	{
+		$mqtt->retain ($topic => $value);
+	}
+	else
+	{
+		$mqtt->publish ($topic => $value);
+	}
+}
+
+
+
+sub SendMqttReportMsg ($$$$)
+{
+	my ($topics, $reportType, $value, $retain) = @_;
+	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, @{$topics} ], $REPORT_TOPIC{$reportType}, $value, $retain);
+}
+
+
+
+sub ComfortLogger
+{
+	my ($type, $msg) = @_;
+	Print (($type == $comfort->LOG_SEND ? 'Sent    ' : 'Received'), ': [', $msg, ']');
+}
+
+
+sub ComfortHandler
+{
+	Print ("CTHandler: @_");
+}
+
+
+
+sub ComfortIPHandler
+{
+	my ($type, $zone, $msg) = @_;
+
+	$msg = $msg == 0 ? 'OFF' : 'ON';
+	my $retain = 0;
+	if ($type eq 'IP' && exists ($RETAIN_INPUT{$zone}))
+	{
+		$retain = 1;
+	}
+
+	SendMqttReportMsg ([ $zone ], $type, $msg, $retain);
+}
+
+
+sub ComfortCTHandler
+{
+	my ($type, $counter, $msg) = @_;
+	if ($counter <128)
+	{
+		my @topics = (MQTT_CBUS_PUBLISH_TOPIC, $comfort->CBUS_APPLICATION_LIGHTING, $counter); 
+
+		Print ("CBUS status report: ", join ('/', @topics), " $msg");
+
+		SendMqttMsg (\@topics, 'switch', $msg == 0 ? 'OFF' : 'ON', 1);
+		SendMqttMsg (\@topics, 'level',  $msg, 1);
+	}
+
+	SendMqttReportMsg ([ $counter ], $type, $msg, 0);
+}
+
+
+
+sub ComfortResultHandler
+{
+	my ($type, $msg) = @_;
+	$type //= 'unknown';
+
+	if (exists $REPORT_TOPIC{$type})
+	{
+		$type = $REPORT_TOPIC{$type};
+	}
+
+	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, 'raw' ], $type, $msg, 0);
+}
+

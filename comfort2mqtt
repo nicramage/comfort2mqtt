@@ -275,6 +275,13 @@ sub MqttComfortCallback
 			$result = $comfort->Send ($msg);
 		}
 	}
+	elsif ($op eq 'get')
+	{
+		if ($cmd eq 'date' && $n == 0)
+		{
+			$result = $comfort->Send ('DT');
+		}
+	}
 
 	if (! defined ($result))
 	{

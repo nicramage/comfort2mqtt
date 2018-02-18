@@ -471,6 +471,21 @@ sub DisableReports ($)
 }
 
 
+sub SetDateTime ($$)
+{
+	my ($this, $tm) = @_;
+	my ($sec, $min, $hour, $day, $month, $year) = localtime ($tm);
+	my $result = $this->SendAndReceive (sprintf ('DT%04u%02u%02u%02u%02u%02u', $year + 1900, $month + 1, $day, $hour, $min, $sec));
+	if ($result && $result eq 'OK')
+	{
+		return 1;
+	}
+
+	$this->SetLastErrorMsg ("Set date/time to '" . scalar (localtime ($tm)) . "' Failed");
+	return undef;
+}
+
+
 sub SendKey ($$)
 {
 	my ($this, $key) = @_;

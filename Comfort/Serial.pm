@@ -2,6 +2,7 @@ use strict;
 
 package Comfort::Serial;
 use Time::HiRes qw (usleep);
+use Time::Local;
 
 our $module;
 if ($^O =~ /mswin/i)
@@ -67,6 +68,7 @@ our %MSG_TYPES =
 	'BY' => [ '(A2)*' ],
 	'CT' => [ '(A2)(A2)' ],
 	'C?' => [ '(A2)(A2)' ],
+	'DT' => [ '(A4)(A2)*', \&_ToTime_t ],
 	'ER' => [ '(A2)*' ],
 	'EX' => [ '(A2)*' ],
 	'IP' => [ '(A2)*' ],
@@ -348,6 +350,14 @@ sub _CallReportCallback ($$$)
 	}
 
 	return $handled;
+}
+
+
+sub _ToTime_t
+{
+	my ($year, $month, $day, $hour, $min, $sec, $dst) = @_;
+
+	return timelocal ($sec, $min, $hour, $day, $month - 1, $year);
 }
 
 

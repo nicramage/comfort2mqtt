@@ -58,6 +58,8 @@ use constant COMFORT_OUTPUT_TOGGLE => 2;
 use constant COMFORT_OUTPUT_PULSE => 3;
 use constant COMFORT_OUTPUT_FLASH => 4;
 
+use constant COMFORT_DEFAULT_INPUT_COUNT => 32;
+
 our @REPORTS = qw (IP CT AL AM AR MD ER BP BY OP EX PT IR IX);
 our %MSG_TYPES =
 (
@@ -113,7 +115,11 @@ sub new ($$)
 	$this->{TIMEOUT} = READ_TIMEOUT;
 	$this->{REPORT_CALLBACK} = undef;
 	$this->{LOG_CALLBACK} = undef;
-	$this->{REPORT_CALLBACKS} = { };
+	$this->{INPUT_COUNT} = COMFORT_DEFAULT_INPUT_COUNT;
+	$this->{REPORT_CALLBACKS} =
+	{
+		'Z?' => \&_HandleAllZonesReport
+	};
 	$this->{CBUS_UCM} = 2;
 
 	bless ($this, $class);
@@ -134,6 +140,13 @@ sub GetLastErrorMsg()
 {
 	my $this = shift;
 	return $this->{LAST_ERROR_MSG};
+}
+
+
+sub SetMaximumInputs ($$)
+{
+	my ($this, $count) = @_;
+	$this->{INPUT_COUNT} = $count;
 }
 
 
@@ -383,6 +396,20 @@ sub _ProcessMsg ($$)
 	}
 
 	return ($handled, $type);
+}
+
+
+sub _HandleAllZonesReport
+{
+	my ($this, $type, @zones) = @_;
+	my $zone = 1;
+	foreach my $zones (@zones)
+	{
+		for (my $i = 0;  $i < 4 && $zone <= $this->{INPUT_COUNT};  ++$i, $zones >>= 1, ++$zone)
+		{
+			$this->_CallReportCallback ('IP', sprintf ('%02X%02X', $zone, $zones & 1));
+		}
+	}
 }
 
 

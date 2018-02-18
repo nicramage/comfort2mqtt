@@ -201,11 +201,14 @@ while (! $terminated)
 			next;
 		}
 
+		$reportsEnabled = 1;
+
 		$comfort->SetReportCallback ('CT', \&ComfortCTHandler);
 		$comfort->SetReportCallback ('C?', \&ComfortCTHandler);
 		$comfort->SetReportCallback ('DT', \&ComfortDTHandler);
 		$comfort->SetReportCallback ('IP', \&ComfortIPHandler);
-		$reportsEnabled = 1;
+
+		$comfort->Send ('Z?');
 	}
 
 	if ($adjustDateTime)

@@ -345,7 +345,7 @@ sub _CallReportCallback ($$$)
 		my $fn = @$mt < 2 ? \&_ToHex : $mt->[1];
 
 		my @params = $fn->(unpack ($rt, $params));
-		$this->{REPORT_CALLBACKS}->{$type} ($type, @params);
+		$this->{REPORT_CALLBACKS}->{$type} ($this, $type, @params);
 		$handled = 1;
 	}
 
@@ -392,7 +392,7 @@ sub _HandleReport ($$)
 
 	if ($this->{REPORT_CALLBACK})
 	{
-		$this->{REPORT_CALLBACK} ($type, @params);
+		$this->{REPORT_CALLBACK} ($this, $type, @params);
 	}
 }
 

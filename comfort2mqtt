@@ -231,7 +231,7 @@ while (! $terminated)
 	if ($msg && $msg ne 'OK')
 	{
 		Print "Got: [$type, $msg]";
-		&ComfortResultHandler ($type, $msg);
+		&ComfortResultHandler ($comfort, $type, $msg);
 	}
 
 	if (! $terminated)
@@ -438,7 +438,7 @@ sub ComfortHandler
 
 sub ComfortIPHandler
 {
-	my ($type, $zone, $msg) = @_;
+	my ($comfort, $type, $zone, $msg) = @_;
 
 	$msg = $msg == 0 ? 'OFF' : 'ON';
 	my $retain = 0;
@@ -453,7 +453,7 @@ sub ComfortIPHandler
 
 sub ComfortCTHandler
 {
-	my ($type, $counter, $msg) = @_;
+	my ($comfort, $type, $counter, $msg) = @_;
 	if ($counter <128)
 	{
 		my @topics = (MQTT_CBUS_PUBLISH_TOPIC, $comfort->CBUS_APPLICATION_LIGHTING, $counter); 
@@ -471,7 +471,7 @@ sub ComfortCTHandler
 
 sub ComfortDTHandler
 {
-	my ($type, $tm) = @_;
+	my ($comfort, $type, $tm) = @_;
 
 	my $timeDiff = abs (time - $tm);
 	if ($timeDiff >= ALLOWED_TIME_DEVIATION)
@@ -485,7 +485,7 @@ sub ComfortDTHandler
 
 sub ComfortResultHandler
 {
-	my ($type, $msg) = @_;
+	my ($comfort, $type, $msg) = @_;
 	$type //= 'unknown';
 
 	if (exists $REPORT_TOPIC{$type})

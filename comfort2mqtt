@@ -83,6 +83,15 @@ our %OUTPUT_STATUS =
 	'FLASH' => $comfort->COMFORT_OUTPUT_FLASH,
 );
 
+our %ARM_STATUS =
+(
+	'OFF'      => $comfort->COMFORT_ARM_OFF,
+	'NIGHT'    => $comfort->COMFORT_ARM_NIGHT,
+	'DAY'      => $comfort->COMFORT_ARM_DAY,
+	'AWAY'     => $comfort->COMFORT_ARM_AWAY,
+	'VACATION' => $comfort->COMFORT_ARM_VACATION,
+);
+
 our %REPORT_TOPIC =
 (
 	'a?'   => 'alarm_info',
@@ -99,7 +108,7 @@ our %REPORT_TOPIC =
 	'C?'   => 'counter',
 	'DB'   => 'doorbell',
 	'DT'   => 'date',
-	'ER'   => 'arm',
+	'ER'   => 'open_zones',
 	'EV'   => 'event',
 	'EX'   => 'exit_entry_delay',
 	'FL'   => 'flag',
@@ -111,8 +120,8 @@ our %REPORT_TOPIC =
 	'K?'   => 'led',
 	'LB'   => 'low_battery',
 	'LR'   => 'login',
-	'MD'   => 'mode',
-	'M?'   => 'mode',
+	'MD'   => 'arm',
+	'M?'   => 'arm',
 	'OP'   => 'output',
 	'O?'   => 'output',
 	'PT'   => 'pulse',
@@ -207,7 +216,10 @@ while (! $terminated)
 		$comfort->SetReportCallback ('C?', \&ComfortCTHandler);
 		$comfort->SetReportCallback ('DT', \&ComfortDTHandler);
 		$comfort->SetReportCallback ('IP', \&ComfortIPHandler);
+		$comfort->SetReportCallback ('MD', \&ComfortMDHandler);
+		$comfort->SetReportCallback ('M?', \&ComfortMDHandler);
 
+		$comfort->Send ('M?');
 		$comfort->Send ('Z?');
 	}
 
@@ -253,6 +265,34 @@ Print "Terminated.";
 exit 0;
 
 
+sub GetUserName ($)
+{
+	my ($user) = @_;
+	return $user == $comfort->COMFORT_USER_KEYPAD ? 'keypad' : $user;
+}
+
+
+sub ArmToMode ($$)
+{
+	my ($comfort, $mode) = @_;
+
+	my $key =
+		$mode == $comfort->COMFORT_ARM_NIGHT    ? $comfort->COMFORT_KEY_NIGHT :
+		$mode == $comfort->COMFORT_ARM_DAY      ? $comfort->COMFORT_KEY_DAY :
+		$mode == $comfort->COMFORT_ARM_AWAY     ? $comfort->COMFORT_KEY_AWAY :
+		$mode == $comfort->COMFORT_ARM_OFF      ? '' : undef;
+
+	if ($key)
+	{
+		return $comfort->SendKey ($key);
+	}
+	else
+	{
+		return $comfort->SetArmMode ($mode, PASSWORD);
+	}
+}
+
+
 sub MqttComfortCallback
 {
 	my ($topic, $msg) = @_;
@@ -262,7 +302,7 @@ sub MqttComfortCallback
 	my $cmd = pop @params;
 	my $n = scalar (@params);
 
-	Print "Received MQTT COMFORT msg: $topic:$msg ($op: $cmd [@params]";
+	Print "Received MQTT COMFORT msg: $topic:$msg ($op: $cmd [@params])";
 	if ($op eq 'set')
 	{
 		if ($cmd eq 'login' && $n == 0)
@@ -295,6 +335,12 @@ sub MqttComfortCallback
 				Print ("Unknown output msg: $msg");
 			}
 		}
+		elsif ($cmd eq 'arm' && $n == 0)
+		{
+			my $mode = $ARM_STATUS{uc ($msg)};
+			$result = ArmToMode ($comfort, $mode);
+
+		}
 		else
 		{
 			$result = $comfort->Send ($msg);
@@ -305,6 +351,10 @@ sub MqttComfortCallback
 		if ($cmd eq 'date' && $n == 0)
 		{
 			$result = $comfort->Send ('DT');
+		}
+		elsif ($cmd eq 'arm' && $n == 0)
+		{
+			$result = $comfort->Send ('M?');
 		}
 	}
 
@@ -320,7 +370,7 @@ sub MqttCbusCallback
 {
 	my ($topic, $value) = @_;
 	my ($t1, $op, $app, $group, $cmd) = split (/\//, $topic, 5);
-	Print "Received MQTT CBUS msg: $topic=$value: app = $app, group = $group";
+	Print "Received MQTT CBUS msg: $topic = $value: app = $app, group = $group";
 
 	if ($op eq 'set')
 	{
@@ -482,6 +532,15 @@ sub ComfortDTHandler
 		Print ("Time scew of $timeDiff seconds detected.  Date/Time will be adjusted.");
 		$adjustDateTime = 1;
 	}
+}
+
+
+sub ComfortMDHandler
+{
+	my ($comfort, $type, $armMode, $user) = @_;
+	my $armModeName = (grep { $ARM_STATUS{$_} == $armMode } keys %ARM_STATUS)[0];
+
+	SendMqttReportMsg ([ GetUserName ($user) ], $type, $armModeName, 1);
 }
 
 

@@ -52,6 +52,12 @@ use constant CBUS_APPLICATION_SECURITY => 2;
 
 use constant CBUS_UCM_BASE => 16;
 
+use constant COMFORT_KEY_AWAY  => 'away';
+use constant COMFORT_KEY_NIGHT => 'night';
+use constant COMFORT_KEY_DAY   => 'day';
+use constant COMFORT_KEY_PANIC => 'panic';
+use constant COMFORT_KEY_ENTER => 'enter';
+
 use constant COMFORT_OUTPUT_OFF => 0;
 use constant COMFORT_OUTPUT_ON => 1;
 use constant COMFORT_OUTPUT_TOGGLE => 2;
@@ -59,6 +65,15 @@ use constant COMFORT_OUTPUT_PULSE => 3;
 use constant COMFORT_OUTPUT_FLASH => 4;
 
 use constant COMFORT_DEFAULT_INPUT_COUNT => 32;
+
+use constant COMFORT_ARM_OFF => 0;
+use constant COMFORT_ARM_AWAY => 1;
+use constant COMFORT_ARM_NIGHT => 2;
+use constant COMFORT_ARM_DAY => 3;
+use constant COMFORT_ARM_VACATION => 4;
+
+use constant COMFORT_USER_KEYPAD => 240;
+
 
 our @REPORTS = qw (IP CT AL AM AR MD ER BP BY OP EX PT IR IX);
 our %MSG_TYPES =
@@ -76,8 +91,10 @@ our %MSG_TYPES =
 	'IP' => [ '(A2)*' ],
 	'IR' => [ '(A2)*' ],
 	'IX' => [ '(A2)*' ],
-	'MD' => [ '(A2)*' ],
+	'MD' => [ '(A2)(A2)' ],
+	'M?' => [ '(A2)(A2)' ],
 	'OP' => [ '(A2)(A2)' ],
+	'PS' => [ '(A2)' ],
 	'PT' => [ '(A2)*' ],
 	'Z?' => [ '(A)*' ],
 );
@@ -509,6 +526,22 @@ sub SetDateTime ($$)
 	}
 
 	$this->SetLastErrorMsg ("Set date/time to '" . scalar (localtime ($tm)) . "' Failed");
+	return undef;
+}
+
+
+sub SetArmMode ($$$)
+{
+	my ($this, $mode, $userCode, $remote) = @_;
+	my $cmd = $remote ? 'M!' : 'm!';
+
+	my $result = $this->SendAndReceive (sprintf ('%s%02X%s', $cmd, $mode, $userCode));
+	if ($result && $result eq 'OK')
+	{
+		return 1;
+	}
+
+	$this->SetLastErrorMsg (($remote ? 'Remote' : 'Local')." arm to mode $mode failed.");
 	return undef;
 }
 

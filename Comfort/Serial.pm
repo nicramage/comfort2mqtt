@@ -74,6 +74,29 @@ use constant COMFORT_ARM_VACATION => 4;
 
 use constant COMFORT_USER_KEYPAD => 240;
 
+use constant COMFORT_ALARM_INTRUDER            => 0;
+use constant COMFORT_ALARM_ZONE_TROUBLE        => 1;
+use constant COMFORT_ALARM_LOW_BATTERY         => 2;
+use constant COMFORT_ALARM_POWER_FAIL          => 3;
+use constant COMFORT_ALARM_PHONE_TROUBLE       => 4;
+use constant COMFORT_ALARM_DURESS              => 5;
+use constant COMFORT_ALARM_ARM_FAIL            => 6;
+use constant COMFORT_ALARM_SECURITY_OFF        => 8;
+use constant COMFORT_ALARM_SYSTEM_ARMED        => 9;
+use constant COMFORT_ALARM_TAMPER              => 10;
+use constant COMFORT_ALARM_ENTRY_WARNING       => 12;
+use constant COMFORT_ALARM_ALARM_ABORT         => 13;
+use constant COMFORT_ALARM_SIREN_TAMPER        => 14;
+use constant COMFORT_ALARM_BYPASS              => 15;
+use constant COMFORT_ALARM_DIAL_TEST           => 17;
+use constant COMFORT_ALARM_ENTRY_ALERT         => 19;
+use constant COMFORT_ALARM_FIRE                => 20;
+use constant COMFORT_ALARM_PANIC               => 21;
+use constant COMFORT_ALARM_GSM_TROUBLE         => 22;
+use constant COMFORT_ALARM_NEW_MESSAGE         => 23;
+use constant COMFORT_ALARM_DOORBELL            => 24;
+use constant COMFORT_ALARM_COMMUNICATIONS_FAIL => 25;
+use constant COMFORT_ALARM_SIGNIN_TAMPER       => 26;
 
 our @REPORTS = qw (IP CT AL AM AR MD ER BP BY OP EX PT IR IX);
 our %MSG_TYPES =

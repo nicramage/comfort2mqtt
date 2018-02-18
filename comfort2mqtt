@@ -25,6 +25,13 @@ use constant MQTT_CBUS_SUBSCRIBE_TOPIC2 => "cbus/get";
 use constant MQTT_TICK_TIMEOUT => 100;
 use constant ALLOWED_TIME_DEVIATION => 2;
 
+# AM/AR alarm parameter types
+use constant ALARM_NONE => 0;
+use constant ALARM_ZONE => 1;
+use constant ALARM_USER => 2;
+use constant ALARM_ID   => 3;
+
+
 $0 = 'comfort2mqtt';
 
 our $daemon = 0;
@@ -129,6 +136,33 @@ our %REPORT_TOPIC =
 );
 
 
+our %ALARM_TYPE =
+(
+	$comfort->COMFORT_ALARM_INTRUDER            => [ 'intruder',            1, ALARM_ZONE ],
+	$comfort->COMFORT_ALARM_ZONE_TROUBLE        => [ 'zone_trouble',        1, ALARM_ZONE ],
+	$comfort->COMFORT_ALARM_LOW_BATTERY         => [ 'low_battery',         0, ALARM_NONE ],
+	$comfort->COMFORT_ALARM_POWER_FAIL          => [ 'power_fail',          0, ALARM_ID   ],
+	$comfort->COMFORT_ALARM_PHONE_TROUBLE       => [ 'phone_trouble',       0, ALARM_NONE ],
+	$comfort->COMFORT_ALARM_DURESS              => [ 'duress',              1, ALARM_USER ],
+	$comfort->COMFORT_ALARM_ARM_FAIL            => [ 'arm_fail',            0, ALARM_USER ],
+	$comfort->COMFORT_ALARM_SECURITY_OFF        => [ 'security_off',        0, ALARM_USER ],
+	$comfort->COMFORT_ALARM_SYSTEM_ARMED        => [ 'system_armed',        0, ALARM_USER ],
+	$comfort->COMFORT_ALARM_TAMPER              => [ 'tamper',              1, ALARM_ID   ],
+	$comfort->COMFORT_ALARM_ENTRY_WARNING       => [ 'entry_warning',       0, ALARM_ZONE ],
+	$comfort->COMFORT_ALARM_ALARM_ABORT         => [ 'alarm_abort',         0, ALARM_NONE ],
+	$comfort->COMFORT_ALARM_SIREN_TAMPER        => [ 'siren_tamper',        1, ALARM_ID   ],
+	$comfort->COMFORT_ALARM_BYPASS              => [ 'bypass',              0, ALARM_ZONE ],
+	$comfort->COMFORT_ALARM_DIAL_TEST           => [ 'dial_test',           0, ALARM_USER ],
+	$comfort->COMFORT_ALARM_ENTRY_ALERT         => [ 'entry_alert',         0, ALARM_ZONE ],
+	$comfort->COMFORT_ALARM_FIRE                => [ 'fire',                1, ALARM_NONE ],
+	$comfort->COMFORT_ALARM_PANIC               => [ 'panic',               1, ALARM_NONE ],
+	$comfort->COMFORT_ALARM_GSM_TROUBLE         => [ 'gsm_trouble',         0, ALARM_ID   ],
+	$comfort->COMFORT_ALARM_NEW_MESSAGE         => [ 'new_message',         0, ALARM_USER ],
+	$comfort->COMFORT_ALARM_DOORBELL            => [ 'doorbell',            0, ALARM_ID   ],
+	$comfort->COMFORT_ALARM_COMMUNICATIONS_FAIL => [ 'communications_fail', 0, ALARM_ID   ],
+	$comfort->COMFORT_ALARM_SIGNIN_TAMPER       => [ 'signin_tamper',       0, ALARM_ID   ],
+);
+
 $comfort->SetLogger (\&ComfortLogger);
 if ($daemon)
 {
@@ -218,6 +252,8 @@ while (! $terminated)
 		$comfort->SetReportCallback ('IP', \&ComfortIPHandler);
 		$comfort->SetReportCallback ('MD', \&ComfortMDHandler);
 		$comfort->SetReportCallback ('M?', \&ComfortMDHandler);
+		$comfort->SetReportCallback ('AM', \&ComfortAMARHandler);
+		$comfort->SetReportCallback ('AR', \&ComfortAMARHandler);
 
 		$comfort->Send ('M?');
 		$comfort->Send ('Z?');
@@ -543,6 +579,20 @@ sub ComfortMDHandler
 	SendMqttReportMsg ([ GetUserName ($user) ], $type, $armModeName, 1);
 }
 
+
+sub ComfortAMARHandler
+{
+	my ($comfort, $type, $alarm, $param) = @_;
+	$param //= '';
+
+	my ($alarmName, $triggered, $alarmType) = @{$ALARM_TYPE{$alarm}};
+	if ($alarmType == ALARM_USER)
+	{
+		$param = GetUserName ($param);
+	}
+
+	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, $REPORT_TOPIC{$type} ], $alarmName, $param, 0);
+}
 
 
 sub ComfortResultHandler

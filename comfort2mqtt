@@ -23,6 +23,7 @@ use constant MQTT_CBUS_PUBLISH_TOPIC => "cbus/status";
 use constant MQTT_CBUS_SUBSCRIBE_TOPIC1 => "cbus/set";
 use constant MQTT_CBUS_SUBSCRIBE_TOPIC2 => "cbus/get";
 use constant MQTT_TICK_TIMEOUT => 100;
+use constant ALLOWED_TIME_DEVIATION => 5;
 
 $0 = 'comfort2mqtt';
 
@@ -145,6 +146,7 @@ $mqtt->subscribe (MQTT_CBUS_SUBSCRIBE_TOPIC2 . '/#', \&MqttCbusCallback);
 our $connected = 0;
 our $reportsEnabled = 0;
 our $loggedIn = 0;
+our $adjustDateTime = 0;
 
 sub Print (@)
 {
@@ -201,8 +203,28 @@ while (! $terminated)
 
 		$comfort->SetReportCallback ('CT', \&ComfortCTHandler);
 		$comfort->SetReportCallback ('C?', \&ComfortCTHandler);
+		$comfort->SetReportCallback ('DT', \&ComfortDTHandler);
 		$comfort->SetReportCallback ('IP', \&ComfortIPHandler);
 		$reportsEnabled = 1;
+	}
+
+	if ($adjustDateTime)
+	{
+		my $tm = time;
+
+		# Adjust the time once an hour, 06:37 seconds past the hour
+		if ($tm % 3600 == 6*60 + 37)
+		{
+			if ($comfort->SetDateTime ($tm))
+			{
+				Print ("Set Date/Time to ", scalar localtime ($tm));
+				$adjustDateTime = 0;
+			}
+			else
+			{
+				Print ("Failed to set Date/Time: ", $comfort->GetLastErrorMsg());
+			}
+		}
 	}
 
 	my ($msg, $type) = $comfort->Receive (COMFORT_RECEIVE_TIMEOUT);
@@ -443,6 +465,20 @@ sub ComfortCTHandler
 	}
 
 	SendMqttReportMsg ([ $counter ], $type, $msg, 0);
+}
+
+
+
+sub ComfortDTHandler
+{
+	my ($type, $tm) = @_;
+
+	my $timeDiff = abs (time - $tm);
+	if ($timeDiff >= ALLOWED_TIME_DEVIATION)
+	{
+		Print ("Time scew of $timeDiff seconds detected.  Date/Time will be adjusted.");
+		$adjustDateTime = 1;
+	}
 }
 
 

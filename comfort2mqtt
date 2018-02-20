@@ -99,6 +99,12 @@ our %ARM_STATUS =
 	'VACATION' => $comfort->COMFORT_ARM_VACATION,
 );
 
+our %ENTRY_EXIT =
+(
+	$comfort->COMFORT_ENTRY_ALERT => 'entry',
+	$comfort->COMFORT_EXIT_DELAY  => 'exit',
+);
+
 our %REPORT_TOPIC =
 (
 	'a?'   => 'alarm_info',
@@ -254,6 +260,7 @@ while (! $terminated)
 		$comfort->SetReportCallback ('M?', \&ComfortMDHandler);
 		$comfort->SetReportCallback ('AM', \&ComfortAMARHandler);
 		$comfort->SetReportCallback ('AR', \&ComfortAMARHandler);
+		$comfort->SetReportCallback ('EX', \&ComfortEXHandler);
 
 		$comfort->Send ('M?');
 		$comfort->Send ('Z?');
@@ -592,6 +599,14 @@ sub ComfortAMARHandler
 	}
 
 	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, $REPORT_TOPIC{$type} ], $alarmName, $param, 0);
+}
+
+
+sub ComfortEXHandler
+{
+	my ($comfort, $type, $entryOrExit, $delay) = @_;
+	
+	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, $ENTRY_EXIT{$entryOrExit} ], $delay, 0);
 }
 
 

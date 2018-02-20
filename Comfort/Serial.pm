@@ -74,6 +74,9 @@ use constant COMFORT_ARM_VACATION => 4;
 
 use constant COMFORT_USER_KEYPAD => 240;
 
+use constant COMFORT_ENTRY_ALERT => 1;
+use constant COMFORT_EXIT_DELAY => 2;
+
 use constant COMFORT_ALARM_INTRUDER            => 0;
 use constant COMFORT_ALARM_ZONE_TROUBLE        => 1;
 use constant COMFORT_ALARM_LOW_BATTERY         => 2;
@@ -110,7 +113,7 @@ our %MSG_TYPES =
 	'C?' => [ '(A2)(A2)' ],
 	'DT' => [ '(A4)(A2)*', \&_ToTime_t ],
 	'ER' => [ '(A2)*' ],
-	'EX' => [ '(A2)*' ],
+	'EX' => [ '(A2)(A2)' ],
 	'IP' => [ '(A2)*' ],
 	'IR' => [ '(A2)*' ],
 	'IX' => [ '(A2)*' ],

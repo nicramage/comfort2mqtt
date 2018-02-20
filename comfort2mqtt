@@ -23,7 +23,7 @@ use constant MQTT_CBUS_PUBLISH_TOPIC => "cbus/status";
 use constant MQTT_CBUS_SUBSCRIBE_TOPIC1 => "cbus/set";
 use constant MQTT_CBUS_SUBSCRIBE_TOPIC2 => "cbus/get";
 use constant MQTT_TICK_TIMEOUT => 100;
-use constant ALLOWED_TIME_DEVIATION => 5;
+use constant ALLOWED_TIME_DEVIATION => 2;
 
 $0 = 'comfort2mqtt';
 

@@ -64,7 +64,7 @@ our $comfort = Comfort::Serial->new ($comfortPort);
 our %rampLookup =
 (
 	0  => $comfort->CBUS_RAMP_0,
-	4  => $comfort->CBUS_RAMP_8,
+	4  => $comfort->CBUS_RAMP_4,
 	8  => $comfort->CBUS_RAMP_8,
 	12 => $comfort->CBUS_RAMP_12,
 	20 => $comfort->CBUS_RAMP_20,

@@ -608,7 +608,7 @@ sub ComfortMDHandler
 	my ($comfort, $type, $armMode, $user) = @_;
 	my $armModeName = (grep { $ARM_STATUS{$_} == $armMode } keys %ARM_STATUS)[0];
 
-	SendMqttReportMsg ([ GetUserName ($user) ], $type, $armModeName, 1);
+	SendMqttReportMsg ([ GetUserName ($user) ], $type, $armModeName, 0);
 
 	# Report the state to home assistant
 	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], HASS_STATE_TOPIC, $HASS_ARM_STATE{$armMode}, 1);

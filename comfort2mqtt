@@ -31,6 +31,15 @@ use constant ALARM_ZONE => 1;
 use constant ALARM_USER => 2;
 use constant ALARM_ID   => 3;
 
+# State topics for communicating with Home Assistant MQTT alarm
+use constant HASS_STATE_TOPIC     => 'state';
+use constant HASS_STATE_DISARMED  => 'disarmed';
+use constant HASS_STATE_AWAY      => 'armed_away';
+use constant HASS_STATE_HOME      => 'armed_home';
+use constant HASS_STATE_NIGHT     => 'armed_night';
+use constant HASS_STATE_PENDING   => 'pending';
+use constant HASS_STATE_TRIGGERED => 'triggered';
+
 
 $0 = 'comfort2mqtt';
 
@@ -97,6 +106,15 @@ our %ARM_STATUS =
 	'DAY'      => $comfort->COMFORT_ARM_DAY,
 	'AWAY'     => $comfort->COMFORT_ARM_AWAY,
 	'VACATION' => $comfort->COMFORT_ARM_VACATION,
+);
+
+our %HASS_ARM_STATE =
+(
+	$comfort->COMFORT_ARM_OFF       => HASS_STATE_DISARMED,
+	$comfort->COMFORT_ARM_NIGHT     => HASS_STATE_NIGHT,
+	$comfort->COMFORT_ARM_DAY       => HASS_STATE_HOME,
+	$comfort->COMFORT_ARM_AWAY      => HASS_STATE_AWAY,
+	$comfort->COMFORT_ARM_VACATION  => HASS_STATE_AWAY,
 );
 
 our %ENTRY_EXIT =
@@ -382,7 +400,13 @@ sub MqttComfortCallback
 		{
 			my $mode = $ARM_STATUS{uc ($msg)};
 			$result = ArmToMode ($comfort, $mode);
+		}
+		elsif ($cmd eq HASS_STATE_TOPIC && $n == 0)
+		{
+			my $state = lc ($msg);
+			my $mode = (grep { $HASS_ARM_STATE{$_} eq $state } keys %HASS_ARM_STATE)[0];
 
+			$result = ArmToMode ($comfort, $mode);
 		}
 		else
 		{
@@ -584,6 +608,9 @@ sub ComfortMDHandler
 	my $armModeName = (grep { $ARM_STATUS{$_} == $armMode } keys %ARM_STATUS)[0];
 
 	SendMqttReportMsg ([ GetUserName ($user) ], $type, $armModeName, 1);
+
+	# Report the state to home assistant
+	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], HASS_STATE_TOPIC, $HASS_ARM_STATE{$armMode}, 1);
 }
 
 
@@ -599,6 +626,12 @@ sub ComfortAMARHandler
 	}
 
 	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, $REPORT_TOPIC{$type} ], $alarmName, $param, 0);
+
+	# Report the state to home assistant
+	if ($type eq 'AM' && $triggered)
+	{
+		SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], HASS_STATE_TOPIC, HASS_STATE_TRIGGERED, 1);
+	}
 }
 
 
@@ -607,6 +640,9 @@ sub ComfortEXHandler
 	my ($comfort, $type, $entryOrExit, $delay) = @_;
 	
 	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, $ENTRY_EXIT{$entryOrExit} ], $delay, 0);
+
+	# Report the state to home assistant
+	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], HASS_STATE_TOPIC, HASS_STATE_PENDING, 1);
 }
 
 

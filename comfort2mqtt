@@ -193,7 +193,7 @@ if ($daemon)
 {
 	Proc::Daemon::Init ({
 		work_dir => $Bin,
-		child_STDOUT => ($logFileName ? $logFileName : '/dev/null')
+		child_STDOUT => ($logFileName ? ">>$logFileName" : '/dev/null')
 		});
 }
 elsif ($logFileName)
@@ -229,13 +229,16 @@ $SIG{INT} = $SIG{QUIT} = $SIG{TERM} = sub
 	$terminated = 1;
 };
 
+Print "===================================================================";
+Print "Starting up ....";
+
 while (! $terminated)
 {
 	if (! $connected)
 	{
 		$loggedIn = 0;
 
-		Print "Connecting to ", MQTT_HOST, " ...";
+		Print ("Connecting to ", MQTT_HOST, " ...");
 		if (! $comfort->Connect())
 		{
 			Print "Coult no connect.  Retrying ...";
@@ -243,6 +246,8 @@ while (! $terminated)
 			next;
 		}
 
+
+		Print ("Connected.");
 		$connected = 1;
 	}
 
@@ -256,11 +261,13 @@ while (! $terminated)
 			next;
 		}
 
+		Print ("Logged in.");
 		$loggedIn = 1;
 	}
 
 	if (! $reportsEnabled)
 	{
+		Print "Enabling reports ...";
 		if (! $comfort->EnableReports (\&ComfortResultHandler))
 		{
 			Print "Could not enable reports.  Reconnecting ...";
@@ -269,6 +276,7 @@ while (! $terminated)
 			next;
 		}
 
+		Print ("Reports enabled.");
 		$reportsEnabled = 1;
 
 		$comfort->SetReportCallback ('CT', \&ComfortCTHandler);
@@ -281,6 +289,7 @@ while (! $terminated)
 		$comfort->SetReportCallback ('AR', \&ComfortAMARHandler);
 		$comfort->SetReportCallback ('EX', \&ComfortEXHandler);
 
+		Print ("Requesting alarm state ...");
 		$comfort->Send ('M?');
 		$comfort->Send ('Z?');
 	}

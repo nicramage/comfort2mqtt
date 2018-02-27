@@ -77,6 +77,11 @@ our %RETAIN_INPUT =
 );
 
 
+our %RETAIN_OUTPUT =
+(
+);
+
+
 our $comfort = Comfort::Serial->new ($comfortPort);
 our %rampLookup =
 (
@@ -283,6 +288,7 @@ while (! $terminated)
 		$comfort->SetReportCallback ('C?', \&ComfortCTHandler);
 		$comfort->SetReportCallback ('DT', \&ComfortDTHandler);
 		$comfort->SetReportCallback ('IP', \&ComfortIPHandler);
+		$comfort->SetReportCallback ('OP', \&ComfortOPHandler);
 		$comfort->SetReportCallback ('MD', \&ComfortMDHandler);
 		$comfort->SetReportCallback ('M?', \&ComfortMDHandler);
 		$comfort->SetReportCallback ('AM', \&ComfortAMARHandler);
@@ -578,6 +584,21 @@ sub ComfortIPHandler
 	}
 
 	SendMqttReportMsg ([ $zone ], $type, $msg, $retain);
+}
+
+
+sub ComfortOPHandler
+{
+	my ($comfort, $type, $output, $msg) = @_;
+
+	$msg = $msg == 0 ? 'OFF' : 'ON';
+	my $retain = 0;
+	if ($type eq 'OP' && exists ($RETAIN_OUTPUT{$output}))
+	{
+		$retain = 1;
+	}
+
+	SendMqttReportMsg ([ $output ], $type, $msg, $retain);
 }
 
 

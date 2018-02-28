@@ -665,12 +665,21 @@ sub ComfortAMARHandler
 	$param //= '';
 
 	my ($alarmName, $triggered, $alarmType) = @{$ALARM_TYPE{$alarm}};
-	if ($alarmType == ALARM_USER)
+
+	if ($alarmType == ALARM_ZONE)
 	{
-		$param = GetUserName ($param);
+		SendMqttZIOMsg ($REPORT_TOPIC{$type}, $param, $type eq 'AM' ? 'ON' : 'OFF', 1);
+	}
+	else
+	{
+		if ($alarmType == ALARM_USER)
+		{
+			$param = GetUserName ($param);
+		}
+
+		SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, $REPORT_TOPIC{$type} ], $alarmName, $param, 0);
 	}
 
-	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, $REPORT_TOPIC{$type} ], $alarmName, $param, 0);
 
 	# Report the state to home assistant
 	if ($type eq 'AM' && $triggered)

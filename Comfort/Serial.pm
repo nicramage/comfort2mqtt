@@ -101,7 +101,7 @@ use constant COMFORT_ALARM_DOORBELL            => 24;
 use constant COMFORT_ALARM_COMMUNICATIONS_FAIL => 25;
 use constant COMFORT_ALARM_SIGNIN_TAMPER       => 26;
 
-our @REPORTS = qw (IP CT AL AM AR MD ER BP BY OP EX PT IR IX);
+our @REPORTS = qw (IP CT AL AM AR MD ER BP BY OP PS EX PT IR IX);
 our %MSG_TYPES =
 (
 	'AL' => [ '(A2)*' ],

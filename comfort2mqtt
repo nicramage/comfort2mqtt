@@ -289,6 +289,7 @@ while (! $terminated)
 		$comfort->SetReportCallback ('DT', \&ComfortDTHandler);
 		$comfort->SetReportCallback ('IP', \&ComfortIPHandler);
 		$comfort->SetReportCallback ('OP', \&ComfortOPHandler);
+		$comfort->SetReportCallback ('O?', \&ComfortOPHandler);
 		$comfort->SetReportCallback ('MD', \&ComfortMDHandler);
 		$comfort->SetReportCallback ('M?', \&ComfortMDHandler);
 		$comfort->SetReportCallback ('AM', \&ComfortAMARHandler);
@@ -296,6 +297,11 @@ while (! $terminated)
 		$comfort->SetReportCallback ('EX', \&ComfortEXHandler);
 
 		Print ("Requesting alarm state ...");
+		foreach my $output (keys %RETAIN_OUTPUT)
+		{
+			$comfort->Send (sprintf ('O?%02X', $output));
+		}
+
 		$comfort->Send ('M?');
 		$comfort->Send ('Z?');
 	}

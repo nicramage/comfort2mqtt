@@ -564,6 +564,14 @@ sub SendMqttReportMsg ($$$$)
 
 
 
+sub SendMqttZIOMsg ($$$$)
+{
+	my ($topic, $zone, $value, $retain) = @_;
+	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, $zone ], $topic, $value, $retain);
+}
+
+
+
 sub ComfortLogger
 {
 	my ($type, $msg) = @_;
@@ -589,7 +597,7 @@ sub ComfortIPHandler
 		$retain = 1;
 	}
 
-	SendMqttReportMsg ([ $zone ], $type, $msg, $retain);
+	SendMqttZIOMsg ($REPORT_TOPIC{$type}, $zone, $msg, $retain);
 }
 
 
@@ -604,7 +612,7 @@ sub ComfortOPHandler
 		$retain = 1;
 	}
 
-	SendMqttReportMsg ([ $output ], $type, $msg, $retain);
+	SendMqttZIOMsg ($REPORT_TOPIC{$type}, $output, $msg, $retain);
 }
 
 

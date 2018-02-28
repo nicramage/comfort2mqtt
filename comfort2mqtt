@@ -676,7 +676,7 @@ sub ComfortEXHandler
 {
 	my ($comfort, $type, $entryOrExit, $delay) = @_;
 	
-	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, $ENTRY_EXIT{$entryOrExit} ], $delay, 0);
+	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], $ENTRY_EXIT{$entryOrExit}, $delay, 0);
 
 	# Report the state to home assistant
 	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], HASS_STATE_TOPIC, HASS_STATE_PENDING, 1);

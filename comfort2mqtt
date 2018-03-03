@@ -198,7 +198,8 @@ if ($daemon)
 {
 	Proc::Daemon::Init ({
 		work_dir => $Bin,
-		child_STDOUT => ($logFileName ? ">>$logFileName" : '/dev/null')
+		child_STDOUT => ($logFileName ? ">>$logFileName" : '/dev/null'),
+		child_STDERR => ($logFileName ? ">>$logFileName" : '/dev/null')
 		});
 }
 elsif ($logFileName)

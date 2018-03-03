@@ -77,6 +77,17 @@ use constant COMFORT_USER_KEYPAD => 240;
 use constant COMFORT_ENTRY_ALERT => 1;
 use constant COMFORT_EXIT_DELAY => 2;
 
+use constant COMFORT_STATE_IDLE                => 0;
+use constant COMFORT_STATE_TROUBLE             => 1;
+use constant COMFORT_STATE_ALERT               => 2;
+use constant COMFORT_STATE_ALARM               => 3;
+
+use constant COMFORT_PARAMETER_NONE            => 0;
+use constant COMFORT_PARAMETER_ZONE            => 1;
+use constant COMFORT_PARAMETER_USER            => 2;
+use constant COMFORT_PARAMETER_ID              => 3;
+
+use constant COMFORT_ALARM_NONE                => -1;
 use constant COMFORT_ALARM_INTRUDER            => 0;
 use constant COMFORT_ALARM_ZONE_TROUBLE        => 1;
 use constant COMFORT_ALARM_LOW_BATTERY         => 2;
@@ -101,10 +112,66 @@ use constant COMFORT_ALARM_DOORBELL            => 24;
 use constant COMFORT_ALARM_COMMUNICATIONS_FAIL => 25;
 use constant COMFORT_ALARM_SIGNIN_TAMPER       => 26;
 
+use constant COMFORT_ALARM_ZONE_ALERT          => 50;
+use constant COMFORT_ALARM_GAS                 => 51;
+use constant COMFORT_ALARM_FAMILY_CARE         => 52;
+use constant COMFORT_ALARM_PERIMETER_ALERT     => 53;
+use constant COMFORT_ALARM_CMS_TEST            => 54;
+use constant COMFORT_ALARM_HOMESAFE            => 55;
+use constant COMFORT_ALARM_ENGINEER_SIGNIN     => 56;
+use constant COMFORT_ALARM_UNUSED              => 57;
+
+use constant COMFORT_TROUBLE_BIT_AC_FAILURE    => 1 << 8;
+use constant COMFORT_TROUBLE_BIT_LOW_BATTERY   => 1 << 9;
+use constant COMFORT_TROUBLE_BIT_ZONE          => 1 << 10;
+use constant COMFORT_TROUBLE_BIT_RS485         => 1 << 11;
+use constant COMFORT_TROUBLE_BIT_TAMPER        => 1 << 12;
+use constant COMFORT_TROUBLE_BIT_PHONE         => 1 << 13;
+use constant COMFORT_TROUBLE_BIT_GSM           => 1 << 14;
+
+
+our %ALARM_TYPES =
+(
+	 0 => COMFORT_ALARM_NONE,
+	 1 => COMFORT_ALARM_INTRUDER,
+	 2 => COMFORT_ALARM_DURESS,
+	 3 => COMFORT_ALARM_PHONE_TROUBLE,
+	 4 => COMFORT_ALARM_ARM_FAIL,
+	 5 => COMFORT_ALARM_ZONE_TROUBLE,
+	 6 => COMFORT_ALARM_ZONE_ALERT,
+	 7 => COMFORT_ALARM_LOW_BATTERY,
+	 8 => COMFORT_ALARM_POWER_FAIL,
+	 9 => COMFORT_ALARM_PANIC,
+	10 => COMFORT_ALARM_ENTRY_ALERT,
+	11 => COMFORT_ALARM_TAMPER,
+	12 => COMFORT_ALARM_FIRE,
+	13 => COMFORT_ALARM_GAS,
+	14 => COMFORT_ALARM_FAMILY_CARE,
+	15 => COMFORT_ALARM_PERIMETER_ALERT,
+	16 => COMFORT_ALARM_BYPASS,
+	17 => COMFORT_ALARM_SYSTEM_DISARMED,
+	18 => COMFORT_ALARM_CMS_TEST,
+	19 => COMFORT_ALARM_SYSTEM_ARMED,
+	20 => COMFORT_ALARM_ALARM_ABORT,
+	21 => COMFORT_ALARM_ENTRY_WARNING,
+	22 => COMFORT_ALARM_SIREN_TAMPER,
+	23 => COMFORT_ALARM_UNUSED,
+	24 => COMFORT_ALARM_COMMUNICATIONS_FAIL,
+	25 => COMFORT_ALARM_DOORBELL,
+	26 => COMFORT_ALARM_HOMESAFE,
+	27 => COMFORT_ALARM_DIAL_TEST,
+	28 => COMFORT_ALARM_GSM_TROUBLE,
+	29 => COMFORT_ALARM_NEW_MESSAGE,
+	30 => COMFORT_ALARM_ENGINEER_SIGNIN,
+	31 => COMFORT_ALARM_SIGNIN_TAMPER,
+);
+
+
 our @REPORTS = qw (IP CT AL AM AR MD ER BP BY OP PS EX PT IR IX);
 our %MSG_TYPES =
 (
-	'AL' => [ '(A2)*' ],
+	'a?' => [ '(A2)(A2)(A4)(A2)*' ],
+	'AL' => [ '(A2)*', \&_ToAlarmType ],
 	'AM' => [ '(A2)*' ],
 	'AR' => [ '(A2)*' ],
 	'BP' => [ '(A2)*' ],
@@ -407,6 +474,14 @@ sub _CallReportCallback ($$$)
 	}
 
 	return $handled;
+}
+
+
+sub _ToAlarmType
+{
+	my (@params) = _ToHex (@_);
+	my $alarmType = shift @params;
+	return ( (exists ($ALARM_TYPES{$alarmType}) ? $ALARM_TYPES{$alarmType} : $alarmType + 100), @params );
 }
 
 

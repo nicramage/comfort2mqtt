@@ -113,6 +113,14 @@ our %ARM_STATUS =
 	'VACATION' => $comfort->COMFORT_ARM_VACATION,
 );
 
+our %ALARM_STATE =
+(
+	$comfort->COMFORT_STATE_IDLE    => 'IDLE',
+	$comfort->COMFORT_STATE_TROUBLE => 'TROUBLE',
+	$comfort->COMFORT_STATE_ALERT   => 'ALERT',
+	$comfort->COMFORT_STATE_ALARM   => 'ALARM',
+);
+
 our %HASS_ARM_STATE =
 (
 	$comfort->COMFORT_ARM_OFF       => HASS_STATE_DISARMED,
@@ -191,6 +199,14 @@ our %ALARM_TYPE =
 	$comfort->COMFORT_ALARM_DOORBELL            => [ 'doorbell',            0, ALARM_ID   ],
 	$comfort->COMFORT_ALARM_COMMUNICATIONS_FAIL => [ 'communications_fail', 0, ALARM_ID   ],
 	$comfort->COMFORT_ALARM_SIGNIN_TAMPER       => [ 'signin_tamper',       0, ALARM_ID   ],
+	$comfort->COMFORT_ALARM_ZONE_ALERT          => [ 'zone_alert',          0, ALARM_ZONE ],
+	$comfort->COMFORT_ALARM_GAS                 => [ 'gas',                 0, ALARM_NONE ],
+	$comfort->COMFORT_ALARM_FAMILY_CARE         => [ 'family_care',         0, ALARM_NONE ],
+	$comfort->COMFORT_ALARM_PERIMETER_ALERT     => [ 'perimeter_alert',     0, ALARM_ZONE ],
+	$comfort->COMFORT_ALARM_CMS_TEST            => [ 'cms_test',            0, ALARM_NONE ],
+	$comfort->COMFORT_ALARM_HOMESAFE            => [ 'homesafe',            0, ALARM_NONE ],
+	$comfort->COMFORT_ALARM_ENGINEER_SIGNIN     => [ 'engineer',            0, ALARM_NONE ],
+	$comfort->COMFORT_ALARM_UNUSED              => [ 'unused',              0, ALARM_NONE ],
 );
 
 $comfort->SetLogger (\&ComfortLogger);
@@ -285,6 +301,8 @@ while (! $terminated)
 		Print ("Reports enabled.");
 		$reportsEnabled = 1;
 
+		$comfort->SetReportCallback ('a?', \&ComfortAlarmInformationHandler);
+		$comfort->SetReportCallback ('AL', \&ComfortALHandler);
 		$comfort->SetReportCallback ('CT', \&ComfortCTHandler);
 		$comfort->SetReportCallback ('C?', \&ComfortCTHandler);
 		$comfort->SetReportCallback ('DT', \&ComfortDTHandler);
@@ -303,6 +321,7 @@ while (! $terminated)
 			$comfort->Send (sprintf ('O?%02X', $output));
 		}
 
+		$comfort->Send ('a?');
 		$comfort->Send ('M?');
 		$comfort->Send ('Z?');
 	}
@@ -586,7 +605,6 @@ sub ComfortHandler
 }
 
 
-
 sub ComfortIPHandler
 {
 	my ($comfort, $type, $zone, $msg) = @_;
@@ -665,27 +683,101 @@ sub ComfortAMARHandler
 	my ($comfort, $type, $alarm, $param) = @_;
 	$param //= '';
 
-	my ($alarmName, $triggered, $alarmType) = @{$ALARM_TYPE{$alarm}};
+	my ($alarmName, $triggered, $paramType) = @{$ALARM_TYPE{$alarm}};
 
-	if ($alarmType == ALARM_ZONE)
+	if ($paramType != ALARM_ZONE)
 	{
-		SendMqttZIOMsg ($REPORT_TOPIC{$type}, $param, $type eq 'AM' ? 'ON' : 'OFF', 1);
-	}
-	else
-	{
-		if ($alarmType == ALARM_USER)
+		if ($paramType == ALARM_USER)
 		{
 			$param = GetUserName ($param);
 		}
 
 		SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, $REPORT_TOPIC{$type} ], $alarmName, $param, 0);
 	}
+}
 
 
-	# Report the state to home assistant
-	if ($type eq 'AM' && $triggered)
+sub ComfortALHandler
+{
+	my ($comfort, $type, $alarmType, $alarmState, $newAlarmState, $sentenceNumber, $paramType, $param) = @_;
+
+	if (exists ($ALARM_TYPE{$alarmType}))
 	{
-		SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], HASS_STATE_TOPIC, HASS_STATE_TRIGGERED, 1);
+		my ($alarmName) = @{$ALARM_TYPE{$alarmType}};
+		$newAlarmState = $alarmState if ($newAlarmState < $alarmState);
+
+		if ($paramType == $comfort->COMFORT_PARAMETER_ZONE)
+		{
+			SendMqttZIOMsg ($alarmName, $param, 'ON', 0);
+		}
+
+		if (exists ($ALARM_STATE{$newAlarmState}))
+		{
+			SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], 'state', $ALARM_STATE{$newAlarmState}, 1);
+		}
+		else
+		{
+			Print ("WARNING: ComfortALHandler: Unknown new alarm state: $newAlarmState");
+		}
+
+		if ($newAlarmState == $comfort->COMFORT_STATE_ALARM)
+		{
+			SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], HASS_STATE_TOPIC, HASS_STATE_TRIGGERED, 1);
+		}
+	}
+	else
+	{
+		Print ("WARNING: ComfortALHandler: Unknown alarm type: $alarmType");
+	}
+}
+
+
+sub ComfortAlarmInformationHandler
+{
+	my ($comfort, $type, $alarmType, $alarmState, $troubleBits, $batteryId, $zone, $rs485Id, $tamperId, $gsmId) = @_;
+
+	Print ("INFO: $type: alarmType: $alarmType, alarmState: $alarmState, troubleBits: $troubleBits, zone: $zone");
+	my @preAlarmType = ($comfort, $type);
+	my @postAlarmType = ($alarmState, $alarmState, 0);
+
+	if ($troubleBits & $comfort->COMFORT_TROUBLE_BIT_AC_FAILURE)
+	{
+		ComfortALHandler (@preAlarmType, $comfort->COMFORT_ALARM_POWER_FAIL, @postAlarmType, $comfort->COMFORT_PARAMETER_NONE, 0);
+	}
+
+	if ($troubleBits & $comfort->COMFORT_TROUBLE_BIT_LOW_BATTERY)
+	{
+		ComfortALHandler (@preAlarmType, $comfort->COMFORT_ALARM_LOW_BATTERY, @postAlarmType, $comfort->COMFORT_PARAMETER_ID, $batteryId);
+	}
+
+	if ($troubleBits & $comfort->COMFORT_TROUBLE_BIT_ZONE)
+	{
+		ComfortALHandler (@preAlarmType, $comfort->COMFORT_ALARM_ZONE_TROUBLE, @postAlarmType, $comfort->COMFORT_PARAMETER_ZONE, $zone);
+	}
+
+	if ($troubleBits & $comfort->COMFORT_TROUBLE_BIT_RS485)
+	{
+		ComfortALHandler (@preAlarmType, $comfort->COMFORT_ALARM_COMMUNICATIONS_FAIL, @postAlarmType, $comfort->COMFORT_PARAMETER_ID, $rs485Id);
+	}
+
+	if ($troubleBits & $comfort->COMFORT_TROUBLE_BIT_TAMPER)
+	{
+		ComfortALHandler (@preAlarmType, $comfort->COMFORT_ALARM_TAMPER, @postAlarmType, $comfort->COMFORT_PARAMETER_ID, $tamperId);
+	}
+
+	if ($troubleBits & $comfort->COMFORT_TROUBLE_BIT_PHONE)
+	{
+		ComfortALHandler (@preAlarmType, $comfort->COMFORT_ALARM_PHONE_TROUBLE, @postAlarmType, $comfort->COMFORT_PARAMETER_ZONE, 0);
+	}
+
+	if ($troubleBits & $comfort->COMFORT_TROUBLE_BIT_GSM)
+	{
+		ComfortALHandler (@preAlarmType, $comfort->COMFORT_ALARM_GSM_TROUBLE, @postAlarmType, $comfort->COMFORT_PARAMETER_ID, $gsmId);
+	}
+
+	if ($troubleBits == 0)
+	{
+		ComfortALHandler (@preAlarmType, $alarmType, $comfort->COMFORT_PARAMETER_NONE, 0);
 	}
 }
 

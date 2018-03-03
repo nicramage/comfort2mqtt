@@ -32,7 +32,7 @@ use constant ALARM_USER => 2;
 use constant ALARM_ID   => 3;
 
 # State topics for communicating with Home Assistant MQTT alarm
-use constant HASS_STATE_TOPIC     => 'state';
+use constant HASS_STATE_TOPIC     => 'hass_state';
 use constant HASS_STATE_DISARMED  => 'disarmed';
 use constant HASS_STATE_AWAY      => 'armed_away';
 use constant HASS_STATE_HOME      => 'armed_home';

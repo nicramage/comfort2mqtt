@@ -384,7 +384,7 @@ sub Receive ($)
 
 
 
-sub _ToHex
+sub _ToHex (@)
 {
 	return map { hex } @_;
 }

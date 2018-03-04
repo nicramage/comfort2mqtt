@@ -405,10 +405,10 @@ sub MqttComfortCallback
 
 	my $result = '';
 	my ($t1, $op, @params) = split (/\//, $topic);
-	my $cmd = pop @params;
+	my $cmd = (@params ? pop @params : 'none');
 	my $n = scalar (@params);
 
-	Print "Received MQTT COMFORT msg: $topic:$msg ($op: $cmd [@params])";
+	Print "Received MQTT COMFORT msg: $topic = $msg ($op/$cmd (@params))";
 	if ($op eq 'set')
 	{
 		if ($cmd eq 'login' && $n == 0)
@@ -470,7 +470,7 @@ sub MqttComfortCallback
 		}
 	}
 
-	if (! defined ($result))
+	if ($cmd ne 'none' && ! defined ($result))
 	{
 		Print $comfort->GetLastErrorMsg();
 	}

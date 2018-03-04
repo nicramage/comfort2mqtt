@@ -349,7 +349,10 @@ while (! $terminated)
 	if ($msg && $msg ne 'OK')
 	{
 		Print "Got: [$type, $msg]";
-		&ComfortResultHandler ($comfort, $type, $msg);
+		if ($msg ne 'NA')
+		{
+			&ComfortResultHandler ($comfort, $type, $msg);
+		}
 	}
 
 	if (! $terminated)

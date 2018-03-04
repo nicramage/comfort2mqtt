@@ -667,6 +667,22 @@ sub SendKey ($$)
 }
 
 
+sub BypassZone ($$$)
+{
+	my ($this, $zone, $onOff) = @_;
+	my $cmd = sprintf ($onOff ? 'DA4B%02X' : 'DA4C%02X', $zone);
+
+	my $result = $this->SendAndReceive ($cmd);
+
+	if ($result && $result eq 'RA00')
+	{
+		return 1;
+	}
+
+	$this->SetLastErrorMsg (($onOff ? 'Bypass' : 'Unbypass') . " zone $zone failed");
+	return undef;
+}
+
 
 sub SetOutput ($$$)
 {

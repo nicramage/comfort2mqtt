@@ -441,6 +441,18 @@ sub MqttComfortCallback
 				Print ("Unknown output msg: $msg");
 			}
 		}
+		elsif ($cmd eq 'bypass' && $n == 1)
+		{
+			my ( $zone ) = @params;
+			if ($msg eq 'ON' || $msg eq 'OFF')
+			{
+				$result = $comfort->BypassZone ($zone, $msg eq 'ON' ? 1 : 0);
+			}
+			else
+			{
+				Print ("ERROR: Unknown bypass msg: $msg");
+			}
+		}
 		elsif ($cmd eq 'arm' && $n == 0)
 		{
 			my $mode = $ARM_STATUS{uc ($msg)};

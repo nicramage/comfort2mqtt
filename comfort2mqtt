@@ -675,7 +675,7 @@ sub ComfortOPHandler
 sub ComfortCTHandler
 {
 	my ($comfort, $type, $counter, $msg) = @_;
-	if ($counter <128)
+	if ($counter <= 255)
 	{
 		my @topics = (MQTT_CBUS_PUBLISH_TOPIC, $comfort->CBUS_APPLICATION_LIGHTING, $counter); 
 

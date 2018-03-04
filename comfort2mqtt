@@ -40,6 +40,10 @@ use constant HASS_STATE_NIGHT     => 'armed_night';
 use constant HASS_STATE_PENDING   => 'pending';
 use constant HASS_STATE_TRIGGERED => 'triggered';
 
+use constant COMFORT2MQTT_STATUS_TOPIC   => 'comfort2mqtt/status';
+use constant COMFORT2MQTT_STATUS_ONLINE  => 'online';
+use constant COMFORT2MQTT_STATUS_OFFLINE => 'offline';
+
 
 $0 = 'comfort2mqtt';
 
@@ -240,6 +244,8 @@ $mqtt->subscribe (MQTT_COMFORT_SUBSCRIBE_TOPIC2 . '/#', \&MqttComfortCallback);
 $mqtt->subscribe (MQTT_CBUS_SUBSCRIBE_TOPIC1 . '/#', \&MqttCbusCallback);
 $mqtt->subscribe (MQTT_CBUS_SUBSCRIBE_TOPIC2 . '/#', \&MqttCbusCallback);
 
+# Tell everyone we're offline
+&SendMqttMsg ([], COMFORT2MQTT_STATUS_TOPIC, COMFORT2MQTT_STATUS_OFFLINE, 1);
 
 our $connected = 0;
 our $reportsEnabled = 0;
@@ -309,6 +315,9 @@ while (! $terminated)
 		Print ("Reports enabled.");
 		$reportsEnabled = 1;
 
+		# Tell everyone we're ready
+		&SendMqttMsg ([], COMFORT2MQTT_STATUS_TOPIC, COMFORT2MQTT_STATUS_ONLINE, 1);
+
 		$comfort->SetReportCallback ('a?', \&ComfortAlarmInformationHandler);
 		$comfort->SetReportCallback ('AL', \&ComfortALHandler);
 		$comfort->SetReportCallback ('CT', \&ComfortCTHandler);
@@ -370,6 +379,9 @@ while (! $terminated)
 }
 
 Print "Terminating ...";
+
+# Tell everyone we're offline again
+&SendMqttMsg ([], COMFORT2MQTT_STATUS_TOPIC, COMFORT2MQTT_STATUS_OFFLINE, 1);
 
 $comfort->Logout();
 $comfort->Disconnect();

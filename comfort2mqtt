@@ -85,7 +85,8 @@ our %RETAIN_OUTPUT =
 (
 );
 
-
+# The values of all retained topics sent out.
+our %RETAINED = ();
 our $comfort = Comfort::Serial->new ($comfortPort);
 our %rampLookup =
 (
@@ -602,9 +603,17 @@ sub SendMqttMsg
 	if ($retain)
 	{
 		$mqtt->retain ($topic => $value);
+		$RETAINED{$topic} = $value;
 	}
 	else
 	{
+		# If the topic was previously retained, then delete it first
+		if (exists $RETAINED{$topic})
+		{
+			delete $RETAINED{$topic};
+			$mqtt->retain ($topic => '');
+		}
+
 		$mqtt->publish ($topic => $value);
 	}
 }

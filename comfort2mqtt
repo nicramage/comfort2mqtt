@@ -95,6 +95,14 @@ our %rampLookup =
 	60 => $comfort->CBUS_RAMP_60,
 );
 
+our %INPUT_STATUS =
+(
+	$comfort->COMFORT_INPUT_OFF           => 'OFF',
+	$comfort->COMFORT_INPUT_ON            => 'ON',
+	$comfort->COMFORT_INPUT_SHORT_CIRCUIT => 'TROUBLE',
+	$comfort->COMFORT_INPUT_OPEN_CIRCUIT  => 'TROUBLE',
+);
+
 our %OUTPUT_STATUS =
 (
 	'OFF' => $comfort->COMFORT_OUTPUT_OFF,
@@ -624,14 +632,16 @@ sub ComfortIPHandler
 {
 	my ($comfort, $type, $zone, $msg) = @_;
 
-	$msg = $msg == 0 ? 'OFF' : 'ON';
-	my $retain = 0;
-	if ($type eq 'IP' && exists ($RETAIN_INPUT{$zone}))
+	# Retain zones in trouble mode, but not on/off
+	my $retain = $msg != $comfort->COMFORT_INPUT_ON && $comfort->COMFORT_INPUT_OFF;
+
+	# Retain specifically configured zones
+	if (exists ($RETAIN_INPUT{$zone}))
 	{
 		$retain = 1;
 	}
 
-	SendMqttZIOMsg ($REPORT_TOPIC{$type}, $zone, $msg, $retain);
+	SendMqttZIOMsg ($REPORT_TOPIC{$type}, $zone, $INPUT_STATUS{$msg}, $retain);
 }
 
 
@@ -690,6 +700,13 @@ sub ComfortMDHandler
 
 	# Report the state to home assistant
 	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], HASS_STATE_TOPIC, $HASS_ARM_STATE{$armMode}, 1);
+
+	# Request an update to all zone states on alarm disarm - we do this mainly
+	# to force a reset of all bypassed zones.
+	if ($armMode == $comfort->COMFORT_ARM_OFF)
+	{
+		$comfort->Send ('Z?');
+	}
 }
 
 
@@ -708,6 +725,14 @@ sub ComfortAMARHandler
 		}
 
 		SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, $REPORT_TOPIC{$type} ], $alarmName, $param, 0);
+	}
+	else
+	{
+		# For bypass reports, report the bypass state on the input.
+		if ($alarm == $comfort->COMFORT_ALARM_BYPASS)
+		{
+			SendMqttZIOMsg ($REPORT_TOPIC{'IP'}, $param, 'BYPASS', 1);
+		}
 	}
 }
 

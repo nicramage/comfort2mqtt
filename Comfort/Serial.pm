@@ -58,6 +58,11 @@ use constant COMFORT_KEY_DAY   => 'day';
 use constant COMFORT_KEY_PANIC => 'panic';
 use constant COMFORT_KEY_ENTER => 'enter';
 
+use constant COMFORT_INPUT_OFF           => 0;
+use constant COMFORT_INPUT_ON            => 1;
+use constant COMFORT_INPUT_SHORT_CIRCUIT => 2;
+use constant COMFORT_INPUT_OPEN_CIRCUIT  => 3;
+
 use constant COMFORT_OUTPUT_OFF => 0;
 use constant COMFORT_OUTPUT_ON => 1;
 use constant COMFORT_OUTPUT_TOGGLE => 2;

@@ -776,6 +776,13 @@ sub ComfortALHandler
 		if (exists ($ALARM_STATE{$newAlarmState}))
 		{
 			SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], 'state', $ALARM_STATE{$newAlarmState}, 1);
+
+			# If it's a zone, then report the alarm state for alerts and alarms.
+			if ($paramType == $comfort->COMFORT_PARAMETER_ZONE &&
+				($newAlarmState == $comfort->COMFORT_STATE_ALERT || $newAlarmState == $comfort->COMFORT_STATE_ALARM))
+			{
+				SendMqttZIOMsg ($REPORT_TOPIC{'IP'}, $param, $ALARM_STATE{$newAlarmState}, 1);
+			}
 		}
 		else
 		{

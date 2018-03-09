@@ -763,27 +763,33 @@ sub ComfortALHandler
 	if (exists ($ALARM_TYPE{$alarmType}))
 	{
 		my ($alarmName) = @{$ALARM_TYPE{$alarmType}};
-		$newAlarmState = $alarmState if ($newAlarmState < $alarmState);
 
 		if ($paramType == $comfort->COMFORT_PARAMETER_ZONE)
 		{
-			SendMqttZIOMsg ($alarmName, $param, 'ON', 0);
+			SendMqttZIOMsg ('alarm_type', $param, uc ($alarmName), 1);
+
+			# Report non-idle states on the input
+			if (exists ($ALARM_STATE{$newAlarmState}))
+			{
+				if ($newAlarmState != $comfort->COMFORT_STATE_IDLE)
+				{
+					SendMqttZIOMsg ($REPORT_TOPIC{'IP'}, $param, $ALARM_STATE{$newAlarmState}, 1);
+				}
+			}
+			else
+			{
+				Print ("WARNING: ComfortALHandler: Unknown new alarm state: $newAlarmState");
+			}
 		}
 
-		if (exists ($ALARM_STATE{$newAlarmState}))
+		my $maxAlarmState = $newAlarmState < $alarmState ? $alarmState : $newAlarmState;
+		if (exists ($ALARM_STATE{$maxAlarmState}))
 		{
-			SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], 'state', $ALARM_STATE{$newAlarmState}, 1);
-
-			# If it's a zone, then report the alarm state for alerts and alarms.
-			if ($paramType == $comfort->COMFORT_PARAMETER_ZONE &&
-				($newAlarmState == $comfort->COMFORT_STATE_ALERT || $newAlarmState == $comfort->COMFORT_STATE_ALARM))
-			{
-				SendMqttZIOMsg ($REPORT_TOPIC{'IP'}, $param, $ALARM_STATE{$newAlarmState}, 1);
-			}
+			SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], 'state', $ALARM_STATE{$maxAlarmState}, 1);
 		}
 		else
 		{
-			Print ("WARNING: ComfortALHandler: Unknown new alarm state: $newAlarmState");
+			Print ("WARNING: ComfortALHandler: Unknown max alarm state: $maxAlarmState");
 		}
 
 		if ($newAlarmState == $comfort->COMFORT_STATE_ALARM)

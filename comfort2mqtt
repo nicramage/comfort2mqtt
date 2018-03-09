@@ -239,14 +239,11 @@ elsif ($logFileName)
 $| = 1;
 
 
-our $mqtt = Net::MQTT::Simple->new ($mqttHost);
+our $mqtt = Net::MQTT::Simple->new ($mqttHost, COMFORT2MQTT_STATUS_TOPIC, COMFORT2MQTT_STATUS_OFFLINE);
 $mqtt->subscribe (MQTT_COMFORT_SUBSCRIBE_TOPIC1 . '/#', \&MqttComfortCallback);
 $mqtt->subscribe (MQTT_COMFORT_SUBSCRIBE_TOPIC2 . '/#', \&MqttComfortCallback);
 $mqtt->subscribe (MQTT_CBUS_SUBSCRIBE_TOPIC1 . '/#', \&MqttCbusCallback);
 $mqtt->subscribe (MQTT_CBUS_SUBSCRIBE_TOPIC2 . '/#', \&MqttCbusCallback);
-
-# Tell everyone we're offline
-&SendMqttMsg ([], COMFORT2MQTT_STATUS_TOPIC, COMFORT2MQTT_STATUS_OFFLINE, 1);
 
 our $connected = 0;
 our $reportsEnabled = 0;
@@ -268,6 +265,9 @@ $SIG{INT} = $SIG{QUIT} = $SIG{TERM} = sub
 
 Print "===================================================================";
 Print "Starting up ....";
+
+# Tell everyone we're offline, first
+&SendMqttMsg ([], COMFORT2MQTT_STATUS_TOPIC, COMFORT2MQTT_STATUS_OFFLINE, 1);
 
 while (! $terminated)
 {
@@ -381,9 +381,6 @@ while (! $terminated)
 }
 
 Print "Terminating ...";
-
-# Tell everyone we're offline again
-&SendMqttMsg ([], COMFORT2MQTT_STATUS_TOPIC, COMFORT2MQTT_STATUS_OFFLINE, 1);
 
 $comfort->Logout();
 $comfort->Disconnect();

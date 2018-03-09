@@ -332,6 +332,7 @@ while (! $terminated)
 		$comfort->SetReportCallback ('AM', \&ComfortAMARHandler);
 		$comfort->SetReportCallback ('AR', \&ComfortAMARHandler);
 		$comfort->SetReportCallback ('EX', \&ComfortEXHandler);
+		$comfort->SetReportCallback ('PS', \&ComfortPSHandler);
 
 		Print ("Requesting alarm state ...");
 		foreach my $output (keys %RETAIN_OUTPUT)
@@ -851,6 +852,14 @@ sub ComfortEXHandler
 
 	# Report the state to home assistant
 	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], HASS_STATE_TOPIC, HASS_STATE_PENDING, 1);
+}
+
+
+sub ComfortPSHandler
+{
+	my ($comfort, $type, $msg) = @_;
+
+	SendMqttReportMsg ([], $type, $msg ? 'ON' : 'OFF', 0);
 }
 
 

@@ -239,7 +239,8 @@ elsif ($logFileName)
 $| = 1;
 
 
-our $mqtt = Net::MQTT::Simple->new ($mqttHost, COMFORT2MQTT_STATUS_TOPIC, COMFORT2MQTT_STATUS_OFFLINE);
+our $mqtt = Net::MQTT::Simple->new ($mqttHost);
+$mqtt->last_will (COMFORT2MQTT_STATUS_TOPIC, COMFORT2MQTT_STATUS_OFFLINE, 1);
 $mqtt->subscribe (MQTT_COMFORT_SUBSCRIBE_TOPIC1 . '/#', \&MqttComfortCallback);
 $mqtt->subscribe (MQTT_COMFORT_SUBSCRIBE_TOPIC2 . '/#', \&MqttComfortCallback);
 $mqtt->subscribe (MQTT_CBUS_SUBSCRIBE_TOPIC1 . '/#', \&MqttCbusCallback);

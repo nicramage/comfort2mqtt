@@ -767,7 +767,12 @@ sub ComfortALHandler
 
 		if ($paramType == $comfort->COMFORT_PARAMETER_ZONE)
 		{
-			SendMqttZIOMsg ('alarm_type', $param, uc ($alarmName), 1);
+			# Zone bypasses are set on the input, so don't report them
+			# as an alarm.
+			if ($alarmType != $comfort->COMFORT_ALARM_BYPASS)
+			{
+				SendMqttZIOMsg ('alarm_type', $param, uc ($alarmName), 1);
+			}
 
 			# Report non-idle states on the input
 			if (exists ($ALARM_STATE{$newAlarmState}))

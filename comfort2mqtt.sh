@@ -24,8 +24,10 @@ case "$1" in
     ;;
   stop)
     echo "Stopping comfort2mqtt"
-    # kill application you want to stop
-    killall comfort2mqtt
+    while pidof comfort2mqtt >/dev/null ; do
+        kill -s QUIT "$(pidof comfort2mqtt)"
+        sleep 0.5
+    done
     ;;
   status)
     if pidof comfort2mqtt >/dev/null;

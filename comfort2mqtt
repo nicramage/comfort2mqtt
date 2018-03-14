@@ -777,9 +777,14 @@ sub ComfortALHandler
 			# Report non-idle states on the input
 			if (exists ($ALARM_STATE{$newAlarmState}))
 			{
-				if ($newAlarmState != $comfort->COMFORT_STATE_IDLE)
+				if ($newAlarmState == $comfort->COMFORT_STATE_IDLE)
 				{
 					SendMqttZIOMsg ($REPORT_TOPIC{'IP'}, $param, $ALARM_STATE{$newAlarmState}, 1);
+				}
+				else
+				{
+					# Request full information about the alarm state
+					$comfort->RequestAlarmInformationReport();
 				}
 			}
 			else

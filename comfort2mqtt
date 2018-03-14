@@ -757,34 +757,43 @@ sub ComfortAMARHandler
 }
 
 
+sub PublishAlarmState
+{
+	my ($comfort, $type, $alarmState, $alarmType, $param) = @_;
+	my $msg = $ALARM_STATE{$alarmState};
+	if ($alarmState != $comfort->COMFORT_STATE_IDLE)
+	{
+		my ($alarmName) = @{$ALARM_TYPE{$alarmType}};
+		$msg .= ':' . $alarmName;
+		$msg .= ',' . $param if ($param);
+	}
+
+	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], 'state', $msg, 1);
+}
+
+
 sub ComfortALHandler
 {
 	my ($comfort, $type, $alarmType, $alarmState, $newAlarmState, $sentenceNumber, $paramType, $param) = @_;
 
 	if (exists ($ALARM_TYPE{$alarmType}))
 	{
-		my ($alarmName) = @{$ALARM_TYPE{$alarmType}};
-
 		if ($paramType == $comfort->COMFORT_PARAMETER_ZONE)
 		{
 			# Zone bypasses are set on the input, so don't report them
 			# as an alarm.
 			if ($alarmType != $comfort->COMFORT_ALARM_BYPASS)
 			{
+				my ($alarmName) = @{$ALARM_TYPE{$alarmType}};
 				SendMqttZIOMsg ('alarm_type', $param, uc ($alarmName), 1);
 			}
 
 			# Report non-idle states on the input
 			if (exists ($ALARM_STATE{$newAlarmState}))
 			{
-				if ($newAlarmState == $comfort->COMFORT_STATE_IDLE)
+				if ($newAlarmState != $comfort->COMFORT_STATE_IDLE)
 				{
 					SendMqttZIOMsg ($REPORT_TOPIC{'IP'}, $param, $ALARM_STATE{$newAlarmState}, 1);
-				}
-				else
-				{
-					# Request full information about the alarm state
-					$comfort->RequestAlarmInformationReport();
 				}
 			}
 			else
@@ -796,7 +805,15 @@ sub ComfortALHandler
 		my $maxAlarmState = $newAlarmState < $alarmState ? $alarmState : $newAlarmState;
 		if (exists ($ALARM_STATE{$maxAlarmState}))
 		{
-			SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], 'state', $ALARM_STATE{$maxAlarmState}, 1);
+			if ($maxAlarmState == $comfort->COMFORT_STATE_IDLE)
+			{
+				PublishAlarmState ($comfort, $type, $comfort->COMFORT_STATE_IDLE);
+			}
+			else
+			{
+				# Request full information about the alarm state
+				$comfort->RequestAlarmInformationReport();
+			}
 		}
 		else
 		{
@@ -820,47 +837,45 @@ sub ComfortAlarmInformationHandler
 	my ($comfort, $type, $alarmType, $alarmState, $troubleBits, $batteryId, $zone, $rs485Id, $tamperId, $gsmId) = @_;
 
 	Print ("INFO: $type: alarmType: $alarmType, alarmState: $alarmState, troubleBits: $troubleBits, zone: $zone");
-	my @preAlarmType = ($comfort, $type);
-	my @postAlarmType = ($alarmState, $alarmState, 0);
 
 	if ($troubleBits & $comfort->COMFORT_TROUBLE_BIT_AC_FAILURE)
 	{
-		ComfortALHandler (@preAlarmType, $comfort->COMFORT_ALARM_POWER_FAIL, @postAlarmType, $comfort->COMFORT_PARAMETER_NONE, 0);
+		PublishAlarmState ($comfort, $type, $alarmState, $comfort->COMFORT_ALARM_POWER_FAIL);
 	}
 
 	if ($troubleBits & $comfort->COMFORT_TROUBLE_BIT_LOW_BATTERY)
 	{
-		ComfortALHandler (@preAlarmType, $comfort->COMFORT_ALARM_LOW_BATTERY, @postAlarmType, $comfort->COMFORT_PARAMETER_ID, $batteryId);
+		PublishAlarmState ($comfort, $type, $alarmState, $comfort->COMFORT_ALARM_LOW_BATTERY, $batteryId);
 	}
 
 	if ($troubleBits & $comfort->COMFORT_TROUBLE_BIT_ZONE)
 	{
-		ComfortALHandler (@preAlarmType, $comfort->COMFORT_ALARM_ZONE_TROUBLE, @postAlarmType, $comfort->COMFORT_PARAMETER_ZONE, $zone);
+		PublishAlarmState ($comfort, $type, $alarmState, $comfort->COMFORT_ALARM_ZONE_TROUBLE, $zone);
 	}
 
 	if ($troubleBits & $comfort->COMFORT_TROUBLE_BIT_RS485)
 	{
-		ComfortALHandler (@preAlarmType, $comfort->COMFORT_ALARM_COMMUNICATIONS_FAIL, @postAlarmType, $comfort->COMFORT_PARAMETER_ID, $rs485Id);
+		PublishAlarmState ($comfort, $type, $alarmState, $comfort->COMFORT_ALARM_COMMUNICATIONS_FAIL, $rs485Id);
 	}
 
 	if ($troubleBits & $comfort->COMFORT_TROUBLE_BIT_TAMPER)
 	{
-		ComfortALHandler (@preAlarmType, $comfort->COMFORT_ALARM_TAMPER, @postAlarmType, $comfort->COMFORT_PARAMETER_ID, $tamperId);
+		PublishAlarmState ($comfort, $type, $alarmState, $comfort->COMFORT_ALARM_TAMPER, $tamperId);
 	}
 
 	if ($troubleBits & $comfort->COMFORT_TROUBLE_BIT_PHONE)
 	{
-		ComfortALHandler (@preAlarmType, $comfort->COMFORT_ALARM_PHONE_TROUBLE, @postAlarmType, $comfort->COMFORT_PARAMETER_ZONE, 0);
+		PublishAlarmState ($comfort, $type, $alarmState, $comfort->COMFORT_ALARM_PHONE_TROUBLE);
 	}
 
 	if ($troubleBits & $comfort->COMFORT_TROUBLE_BIT_GSM)
 	{
-		ComfortALHandler (@preAlarmType, $comfort->COMFORT_ALARM_GSM_TROUBLE, @postAlarmType, $comfort->COMFORT_PARAMETER_ID, $gsmId);
+		PublishAlarmState ($comfort, $type, $alarmState, $comfort->COMFORT_ALARM_GSM_TROUBLE, $gsmId);
 	}
 
 	if ($troubleBits == 0)
 	{
-		ComfortALHandler (@preAlarmType, $alarmType, $comfort->COMFORT_PARAMETER_NONE, 0);
+		PublishAlarmState ($comfort, $type, $comfort->COMFORT_STATE_IDLE);
 	}
 }
 

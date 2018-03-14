@@ -374,22 +374,22 @@ sub Send ($$$@)
 
 
 
-sub SendAndReceive ($$$)
+sub SendAndReceive ($$$$)
 {
-	my ($this, $cmd, $msg) = @_;
+	my ($this, $cmd, $msg, $match) = @_;
 	if (! $this->Send ($cmd, $msg))
 	{
 		return undef;
 	}
 
-	return $this->Receive ($this->{TIMEOUT}, 1);
+	return $this->Receive ($this->{TIMEOUT}, $match);
 }
 
 
 
 sub Receive ($)
 {
-	my ($this, $waiting, $ignoreReport) = @_;
+	my ($this, $waiting, $match) = @_;
 	my $po = $this->{PORT_OBJECT};
 
 	my $msg = '';
@@ -427,9 +427,18 @@ sub Receive ($)
 			$this->Log (LOG_RECEIVE, $msg);
 
 			my $handled;
+			if (defined ($match))
+			{
+				if (index ($msg, $match) == 0)
+				{
+					last;
+				}
+			}
+
+			
 			($handled, $type) = $this->_ProcessMsg ($msg);
 
-			if (!$handled || !$ignoreReport)
+			if (!$handled || !$match)
 			{
 				$loopsLeft = 0;
 				$msg = '' if ($handled);
@@ -558,7 +567,7 @@ sub Login ($$@)
 		$this->Logout();
 	}
 
-	my $result = $this->SendAndReceive ('LI', $password);
+	my $result = $this->SendAndReceive ('LI', $password, 'LU');
 	if ($result !~ /LU(\d\d)/ || $1 eq '00')
 	{
 		$this->SetLastErrorMsg ("Login Failed");
@@ -576,7 +585,7 @@ sub Logout ($)
 	my $po = $this->{PORT_OBJECT};
 	if ($po && $this->{LOGGED_IN})
 	{
-		my $result = $this->SendAndReceive ('LI');
+		my $result = $this->SendAndReceive ('LI', '', 'LU');
 		if ($result ne 'LU00')
 		{
 			$this->SetLastErrorMsg ("Logout Failed");
@@ -595,7 +604,7 @@ sub EnableReports ($$)
 	my ($this, $callback) = @_;
 	die "Not connected" if (!$this->{PORT_OBJECT});
 
-	my $result = $this->SendAndReceive ('SR', '01');
+	my $result = $this->SendAndReceive ('SR', '01', 'OK');
 
 	if ($result = ($result =~ /^OK/))
 	{
@@ -611,7 +620,7 @@ sub DisableReports ($)
 	my ($this) = @_;
 	die "Not connected" if (!$this->{PORT_OBJECT});
 
-	my $result = $this->SendAndReceive ('SR', '00');
+	my $result = $this->SendAndReceive ('SR', '00', 'OK');
 
 	if ($result = ($result =~ /^OK/))
 	{
@@ -626,7 +635,8 @@ sub SetDateTime ($$)
 {
 	my ($this, $tm) = @_;
 	my ($sec, $min, $hour, $day, $month, $year) = localtime ($tm);
-	my $result = $this->SendAndReceive (sprintf ('DT%04u%02u%02u%02u%02u%02u', $year + 1900, $month + 1, $day, $hour, $min, $sec));
+	my $result = $this->SendAndReceive ('DT',
+		sprintf ('%04u%02u%02u%02u%02u%02u', $year + 1900, $month + 1, $day, $hour, $min, $sec), 'OK');
 	if ($result && $result eq 'OK')
 	{
 		return 1;
@@ -642,7 +652,7 @@ sub SetArmMode ($$$)
 	my ($this, $mode, $userCode, $remote) = @_;
 	my $cmd = $remote ? 'M!' : 'm!';
 
-	my $result = $this->SendAndReceive (sprintf ('%s%02X%s', $cmd, $mode, $userCode));
+	my $result = $this->SendAndReceive ($cmd, sprintf ('%02X%s', $mode, $userCode), 'OK');
 	if ($result && $result eq 'OK')
 	{
 		return 1;
@@ -660,7 +670,7 @@ sub SendKey ($$)
 
 	if (exists $keyLookup{$key})
 	{
-		my $result = $this->SendAndReceive ('KD', $keyLookup{$key});
+		my $result = $this->SendAndReceive ('KD', $keyLookup{$key}, 'OK');
 		if ($result && $result eq 'OK')
 		{
 			return 1;
@@ -675,9 +685,9 @@ sub SendKey ($$)
 sub BypassZone ($$$)
 {
 	my ($this, $zone, $onOff) = @_;
-	my $cmd = sprintf ($onOff ? 'DA4B%02X' : 'DA4C%02X', $zone);
+	my $cmd = sprintf ($onOff ? '4B%02X' : '4C%02X', $zone);
 
-	my $result = $this->SendAndReceive ($cmd);
+	my $result = $this->SendAndReceive ('DA', $cmd, 'RA');
 
 	if ($result && $result eq 'RA00')
 	{
@@ -692,7 +702,7 @@ sub BypassZone ($$$)
 sub SetOutput ($$$)
 {
 	my ($this, $output, $status) = @_;
-	my $result = $this->SendAndReceive (sprintf ('O!%02X%02X', $output, $status));
+	my $result = $this->SendAndReceive ('O!', sprintf ('%02X%02X', $output, $status), 'OK');
 	if ($result && $result eq 'OK')
 	{
 		return 1;
@@ -734,7 +744,7 @@ sub SendCbusCommand ($$$$)
 
 	my $result = $this->SendAndReceive ('DA',
 		sprintf ('C5%02X%0*X%02X%0*X%02XFF',
-			$this->{CBUS_UCM} + CBUS_UCM_BASE, $groupWidth, $group, $cmd, $levelWidth, $level, $app));
+			$this->{CBUS_UCM} + CBUS_UCM_BASE, $groupWidth, $group, $cmd, $levelWidth, $level, $app), 'RA');
 
 	if ($result && $result eq 'RA00')
 	{

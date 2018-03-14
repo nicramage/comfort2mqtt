@@ -647,6 +647,27 @@ sub SetDateTime ($$)
 }
 
 
+sub RequestAlarmInformationReport ($)
+{
+	my ($this) = @_;
+	$this->Send ('a?');
+}
+
+
+sub RequestSecurityModeReport ($)
+{
+	my ($this) = @_;
+	$this->Send ('M?');
+}
+
+
+sub RequestInputReports ($)
+{
+	my ($this) = @_;
+	$this->Send ('Z?');
+}
+
+
 sub SetArmMode ($$$)
 {
 	my ($this, $mode, $userCode, $remote) = @_;

@@ -341,9 +341,9 @@ while (! $terminated)
 			$comfort->Send (sprintf ('O?%02X', $output));
 		}
 
-		$comfort->Send ('a?');
-		$comfort->Send ('M?');
-		$comfort->Send ('Z?');
+		$comfort->RequestAlarmInformationReport();
+		$comfort->RequestSecurityModeReport();
+		$comfort->RequestInputReports();
 	}
 
 	if ($adjustDateTime)

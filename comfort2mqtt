@@ -408,13 +408,16 @@ sub ArmToMode ($$)
 		$mode == $comfort->COMFORT_ARM_AWAY     ? $comfort->COMFORT_KEY_AWAY :
 		$mode == $comfort->COMFORT_ARM_OFF      ? '' : undef;
 
-	if ($key)
+	# Use the keypad to arm, except for vacation and away modes,
+	# in which case, remote arm the system.
+	my $remote = ($mode == $comfort->COMFORT_ARM_AWAY || $mode == $comfort->COMFORT_ARM_VACATION);
+	if ($key && !$remote)
 	{
 		return $comfort->SendKey ($key);
 	}
 	else
 	{
-		return $comfort->SetArmMode ($mode, PASSWORD);
+		return $comfort->SetArmMode ($mode, PASSWORD, $remote);
 	}
 }
 

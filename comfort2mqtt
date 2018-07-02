@@ -603,7 +603,7 @@ sub SendMqttMsg
 	my ($topics, $key, $value, $retain) = @_;
 
 	my $topic = join ('/', @{$topics}, $key);
-	Print "Sending MQTT msg: $topic = $value" . ($retain ? ' (retain)' : '');
+	Print "Sending MQTT msg: $topic = " . ($value ? $value : '[unset]') . ($retain ? ' (retain)' : '');
 
 	if ($retain)
 	{

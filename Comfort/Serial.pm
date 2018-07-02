@@ -266,6 +266,13 @@ sub SetMaximumInputs ($$)
 }
 
 
+sub GetMaximumInputs ($$)
+{
+	my ($this) = @_;
+	return $this->{INPUT_COUNT};
+}
+
+
 sub SetLogger ($$)
 {
 	my ($this, $callback) = @_;

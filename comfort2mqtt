@@ -317,6 +317,9 @@ while (! $terminated)
 		Print ("Reports enabled.");
 		$reportsEnabled = 1;
 
+		# Start with all zone alarm types cleared
+		&ClearAlarmTypes();
+
 		# Tell everyone we're ready
 		&SendMqttMsg ([], COMFORT2MQTT_STATUS_TOPIC, COMFORT2MQTT_STATUS_ONLINE, 1);
 
@@ -638,6 +641,17 @@ sub SendMqttZIOMsg ($$$$)
 
 
 
+sub ClearAlarmTypes()
+{
+	my $count = $comfort->GetMaximumInputs();
+	for (my $zone = 1;  $zone <= $count;  ++$zone)
+	{
+		SendMqttZIOMsg ('alarm_type', $zone, '', 1);
+	}
+}
+
+
+
 sub ComfortLogger
 {
 	my ($type, $msg) = @_;
@@ -825,6 +839,9 @@ sub ComfortALHandler
 
 		if ($newAlarmState == $comfort->COMFORT_STATE_ALARM)
 		{
+			# Clear the alarm types
+			&ClearAlarmTypes();
+
 			SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], HASS_STATE_TOPIC, HASS_STATE_TRIGGERED, 1);
 		}
 	}

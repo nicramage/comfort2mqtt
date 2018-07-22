@@ -77,6 +77,7 @@ use constant COMFORT_ARM_NIGHT => 2;
 use constant COMFORT_ARM_DAY => 3;
 use constant COMFORT_ARM_VACATION => 4;
 
+use constant COMFORT_USER_NONE => 0;
 use constant COMFORT_USER_KEYPAD => 240;
 
 use constant COMFORT_ENTRY_ALERT => 1;

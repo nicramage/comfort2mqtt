@@ -397,7 +397,9 @@ exit 0;
 sub GetUserName ($)
 {
 	my ($user) = @_;
-	return $user == $comfort->COMFORT_USER_KEYPAD ? 'keypad' : $user;
+	return
+		$user == $comfort->COMFORT_USER_KEYPAD ? 'keypad' : 
+		$user == $comfort->COMFORT_USER_NONE   ? 'nouser' : $user;
 }
 
 

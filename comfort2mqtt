@@ -799,11 +799,20 @@ sub ComfortALHandler
 	{
 		if ($paramType == $comfort->COMFORT_PARAMETER_ZONE)
 		{
+			my ($alarmName) = @{$ALARM_TYPE{$alarmType}};
+
+			# Zone zero reports occur for things like arm failure, which
+			# is not necessarily zone related.  Report these as if we received
+			# an AM report.
+			if ($param == 0)
+			{
+				SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, $REPORT_TOPIC{'AM'} ], $alarmName,
+					GetUserName ($comfort->COMFORT_USER_NONE), 0);
+			}
 			# Zone bypasses are set on the input, so don't report them
 			# as an alarm.
-			if ($alarmType != $comfort->COMFORT_ALARM_BYPASS)
+			elsif ($alarmType != $comfort->COMFORT_ALARM_BYPASS)
 			{
-				my ($alarmName) = @{$ALARM_TYPE{$alarmType}};
 				SendMqttZIOMsg ('alarm_type', $param, uc ($alarmName), 1);
 			}
 

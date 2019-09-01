@@ -250,6 +250,8 @@ our $connected = 0;
 our $reportsEnabled = 0;
 our $loggedIn = 0;
 our $adjustDateTime = 0;
+our $mqttConnected = 0;
+our $onlineSent = 0;
 
 sub Print (@)
 {
@@ -303,7 +305,33 @@ while (! $terminated)
 		$loggedIn = 1;
 	}
 
-	if (! $reportsEnabled)
+	$mqttConnected = &IsMqttConnected();
+	if ($mqttConnected == 0)
+	{
+		$onlineSent = 0;
+	}
+
+	if ($loggedIn && ! $onlineSent)
+	{
+		Print "Publishing 'online' status ...";
+		while (! $terminated && ! $onlineSent)
+		{
+			# Tell everyone we're ready
+			&SendMqttMsg ([], COMFORT2MQTT_STATUS_TOPIC, COMFORT2MQTT_STATUS_ONLINE, 1);
+
+			$mqttConnected = &IsMqttConnected();
+			if (! $mqttConnected)
+			{
+				sleep 1;
+				next;
+			}
+
+			Print "Published 'online' status.";
+			$onlineSent = 1;
+		}
+	}
+
+	if (! $reportsEnabled && $mqttConnected)
 	{
 		Print "Enabling reports ...";
 		if (! $comfort->EnableReports (\&ComfortResultHandler))
@@ -319,9 +347,6 @@ while (! $terminated)
 
 		# Start with all zone alarm types cleared
 		&ClearAlarmTypes();
-
-		# Tell everyone we're ready
-		&SendMqttMsg ([], COMFORT2MQTT_STATUS_TOPIC, COMFORT2MQTT_STATUS_ONLINE, 1);
 
 		$comfort->SetReportCallback ('a?', \&ComfortAlarmInformationHandler);
 		$comfort->SetReportCallback ('AL', \&ComfortALHandler);
@@ -425,6 +450,7 @@ sub ArmToMode ($$)
 		return $comfort->SetArmMode ($mode, PASSWORD, $remote);
 	}
 }
+
 
 
 sub MqttComfortCallback
@@ -596,6 +622,15 @@ sub MqttCbusCallback
 	{
 		Print "Unknown operation $op";
 	}
+}
+
+
+
+sub IsMqttConnected
+{
+	# Since MQTT::Simple does not support 'knowing' the connected
+	# state, we 'reach into' the object and check for ourselves.
+	return ($mqtt->{socket} and $mqtt->{socket}->connected) ? 1 : 0;
 }
 
 

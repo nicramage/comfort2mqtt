@@ -573,11 +573,11 @@ sub MqttCbusCallback
 			$value = uc ($value);
 			if ($value eq 'ON' || $value eq 'TRUE')
 			{
-				$level = 255;
+				$level = $comfort->CBUS_LEVEL_ON;
 			}
 			elsif ($value eq 'OFF' || $value eq 'FALSE')
 			{
-				$level = 0;
+				$level = $comfort->CBUS_LEVEL_OFF;
 			}
 
 
@@ -585,7 +585,7 @@ sub MqttCbusCallback
 			{
 				if ($level > 0)
 				{
-					$level = 255;
+					$level = $comfort->CBUS_LEVEL_ON;
 				}
 
 				if ($level > 0)

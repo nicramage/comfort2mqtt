@@ -47,6 +47,22 @@ use constant CBUS_RAMP_OFF => 1;
 use constant CBUS_RAMP_UP => 1;
 use constant CBUS_RAMP_DOWN => 121;
 
+# CBUS Lighting level values
+use constant CBUS_LEVEL_OFF         => 0;
+use constant CBUS_LEVEL_ON          => 255;
+use constant CBUS_LEVEL_5_PERCENT   => int (255*0.05);
+use constant CBUS_LEVEL_10_PERCENT  => int (255*0.10);
+use constant CBUS_LEVEL_20_PERCENT  => int (255*0.20);
+use constant CBUS_LEVEL_25_PERCENT  => int (255*0.25);
+use constant CBUS_LEVEL_30_PERCENT  => int (255*0.30);
+use constant CBUS_LEVEL_40_PERCENT  => int (255*0.40);
+use constant CBUS_LEVEL_50_PERCENT  => int (255*0.50);
+use constant CBUS_LEVEL_60_PERCENT  => int (255*0.60);
+use constant CBUS_LEVEL_70_PERCENT  => int (255*0.70);
+use constant CBUS_LEVEL_75_PERCENT  => int (255*0.75);
+use constant CBUS_LEVEL_80_PERCENT  => int (255*0.80);
+use constant CBUS_LEVEL_90_PERCENT  => int (255*0.90);
+
 use constant CBUS_APPLICATION_LIGHTING => 56;
 use constant CBUS_APPLICATION_SECURITY => 2;
 
@@ -443,7 +459,7 @@ sub Receive ($)
 				}
 			}
 
-			
+
 			($handled, $type) = $this->_ProcessMsg ($msg);
 
 			if (!$handled || !$match)
@@ -784,4 +800,4 @@ sub SendCbusCommand ($$$$)
 	return undef;
 }
 
-1; 
+1;

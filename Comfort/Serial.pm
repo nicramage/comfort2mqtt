@@ -65,6 +65,8 @@ use constant CBUS_LEVEL_90_PERCENT  => int (255*0.90);
 
 use constant CBUS_APPLICATION_LIGHTING => 56;
 use constant CBUS_APPLICATION_SECURITY => 2;
+use constant CBUS_APPLICATION_TRIGGER  => 202;
+use constant CBUS_APPLICATION_ENABLE   => 203;
 
 use constant CBUS_UCM_BASE => 16;
 

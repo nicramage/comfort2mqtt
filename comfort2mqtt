@@ -610,14 +610,16 @@ sub MqttCbusCallback
 					$cbusCmd = $comfort->CBUS_RAMP_ON;
 				}
 			}
-			elsif ($cmd eq 'ramp')
+			elsif ($cmd eq 'ramp' || $cmd eq 'level')
 			{
 				if ($level > 0)
 				{
 					$cbusCmd = $comfort->CBUS_RAMP_0;
 				}
 
-				if ($value =~ /,(\d+)$/)
+				# If 'ramp' was specified, then we can also specify
+				# the ramp period.
+				if ($cmd eq 'ramp' && $value =~ /,(\d+)$/)
 				{
 					if (exists $rampLookup{$1})
 					{

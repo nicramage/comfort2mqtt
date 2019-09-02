@@ -356,7 +356,7 @@ sub Send ($$$@)
 
 	my $error = undef;
 	my $po = $this->{PORT_OBJECT};
-	my $msg = STX . $cmd . $msg . CR;
+	$msg = STX . $cmd . $msg . CR;
 
 	my $count = $po->write ($msg);
 	if (!$count)

@@ -13,15 +13,15 @@ use Comfort::Serial;
 use Net::MQTT::Simple;
 
 use constant COMFORT_PORT => '/dev/ttyUSB0';
+use constant COMFORT_PASSWORD => '0000';
 use constant COMFORT_RECEIVE_TIMEOUT => 100;
-use constant PASSWORD => '0000';
 use constant MQTT_HOST => 'localhost';
 use constant MQTT_COMFORT_PUBLISH_TOPIC => "comfort/status";
-use constant MQTT_COMFORT_SUBSCRIBE_TOPIC1 => "comfort/set";
-use constant MQTT_COMFORT_SUBSCRIBE_TOPIC2 => "comfort/get";
+use constant MQTT_COMFORT_SUBSCRIBE_SET => "comfort/set";
+use constant MQTT_COMFORT_SUBSCRIBE_GET => "comfort/get";
 use constant MQTT_CBUS_PUBLISH_TOPIC => "cbus/status";
-use constant MQTT_CBUS_SUBSCRIBE_TOPIC1 => "cbus/set";
-use constant MQTT_CBUS_SUBSCRIBE_TOPIC2 => "cbus/get";
+use constant MQTT_CBUS_SUBSCRIBE_SET => "cbus/set";
+use constant MQTT_CBUS_SUBSCRIBE_GET => "cbus/get";
 use constant MQTT_TICK_TIMEOUT => 100;
 use constant ALLOWED_TIME_DEVIATION => 2;
 
@@ -241,10 +241,10 @@ $| = 1;
 
 our $mqtt = Net::MQTT::Simple->new ($mqttHost);
 $mqtt->last_will (COMFORT2MQTT_STATUS_TOPIC, COMFORT2MQTT_STATUS_OFFLINE, 1);
-$mqtt->subscribe (MQTT_COMFORT_SUBSCRIBE_TOPIC1 . '/#', \&MqttComfortCallback);
-$mqtt->subscribe (MQTT_COMFORT_SUBSCRIBE_TOPIC2 . '/#', \&MqttComfortCallback);
-$mqtt->subscribe (MQTT_CBUS_SUBSCRIBE_TOPIC1 . '/#', \&MqttCbusCallback);
-$mqtt->subscribe (MQTT_CBUS_SUBSCRIBE_TOPIC2 . '/#', \&MqttCbusCallback);
+$mqtt->subscribe (MQTT_COMFORT_SUBSCRIBE_SET . '/#', \&MqttComfortCallback);
+$mqtt->subscribe (MQTT_COMFORT_SUBSCRIBE_GET . '/#', \&MqttComfortCallback);
+$mqtt->subscribe (MQTT_CBUS_SUBSCRIBE_SET . '/#', \&MqttCbusCallback);
+$mqtt->subscribe (MQTT_CBUS_SUBSCRIBE_GET . '/#', \&MqttCbusCallback);
 
 our $connected = 0;
 our $reportsEnabled = 0;
@@ -263,7 +263,7 @@ sub Print (@)
 our $terminated = 0;
 $SIG{INT} = $SIG{QUIT} = $SIG{TERM} = sub
 {
-	Print "Termination signal recived...";
+	Print "Termination signal received...";
 	$terminated = 1;
 };
 
@@ -295,7 +295,7 @@ while (! $terminated)
 	if (! $loggedIn)
 	{
 		Print "Logging in ...";
-		if (! $comfort->Login (PASSWORD))
+		if (! $comfort->Login (COMFORT_PASSWORD))
 		{
 			Print "Could not login.  Retrying ...";
 			sleep (1);
@@ -432,7 +432,7 @@ sub GetUserName ($)
 {
 	my ($user) = @_;
 	return
-		$user == $comfort->COMFORT_USER_KEYPAD ? 'keypad' : 
+		$user == $comfort->COMFORT_USER_KEYPAD ? 'keypad' :
 		$user == $comfort->COMFORT_USER_NONE   ? 'nouser' : $user;
 }
 
@@ -456,7 +456,7 @@ sub ArmToMode ($$)
 	}
 	else
 	{
-		return $comfort->SetArmMode ($mode, PASSWORD, $remote);
+		return $comfort->SetArmMode ($mode, COMFORT_PASSWORD, $remote);
 	}
 }
 
@@ -748,7 +748,7 @@ sub ComfortCTHandler
 	my ($comfort, $type, $counter, $msg) = @_;
 	if ($counter <= 255)
 	{
-		my @topics = (MQTT_CBUS_PUBLISH_TOPIC, $comfort->CBUS_APPLICATION_LIGHTING, $counter); 
+		my @topics = (MQTT_CBUS_PUBLISH_TOPIC, $comfort->CBUS_APPLICATION_LIGHTING, $counter);
 
 		Print ("CBUS status report: ", join ('/', @topics), " $msg");
 
@@ -958,7 +958,7 @@ sub ComfortAlarmInformationHandler
 sub ComfortEXHandler
 {
 	my ($comfort, $type, $entryOrExit, $delay) = @_;
-	
+
 	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC ], $ENTRY_EXIT{$entryOrExit}, $delay, 0);
 
 	# Report the state to home assistant

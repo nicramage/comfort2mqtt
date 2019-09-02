@@ -252,6 +252,7 @@ our $loggedIn = 0;
 our $adjustDateTime = 0;
 our $mqttConnected = 0;
 our $onlineSent = 0;
+our $alarmStateRequested = 0;
 
 sub Print (@)
 {
@@ -328,6 +329,9 @@ while (! $terminated)
 
 			Print "Published 'online' status.";
 			$onlineSent = 1;
+
+			# Rerequest the alarm state
+			$alarmStateRequested = 0;
 		}
 	}
 
@@ -362,7 +366,10 @@ while (! $terminated)
 		$comfort->SetReportCallback ('AR', \&ComfortAMARHandler);
 		$comfort->SetReportCallback ('EX', \&ComfortEXHandler);
 		$comfort->SetReportCallback ('PS', \&ComfortPSHandler);
+	}
 
+	if (! $alarmStateRequested && $reportsEnabled && $mqttConnected)
+	{
 		Print ("Requesting alarm state ...");
 		foreach my $output (keys %RETAIN_OUTPUT)
 		{
@@ -372,6 +379,8 @@ while (! $terminated)
 		$comfort->RequestAlarmInformationReport();
 		$comfort->RequestSecurityModeReport();
 		$comfort->RequestInputReports();
+
+		$alarmStateRequested = 1;
 	}
 
 	if ($adjustDateTime)

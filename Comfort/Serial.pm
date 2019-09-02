@@ -676,21 +676,56 @@ sub SetDateTime ($$)
 sub RequestAlarmInformationReport ($)
 {
 	my ($this) = @_;
-	$this->Send ('a?');
+	return $this->Send ('a?');
 }
 
 
 sub RequestSecurityModeReport ($)
 {
 	my ($this) = @_;
-	$this->Send ('M?');
+	return $this->Send ('M?');
 }
 
 
 sub RequestInputReports ($)
 {
 	my ($this) = @_;
-	$this->Send ('Z?');
+	return $this->Send ('Z?');
+}
+
+
+sub RequestOutputValue ($$)
+{
+	my ($this, $output) = @_;
+	return $this->Send (sprintf ('O?%02X', $output));;
+}
+
+
+sub RequestDateTime ($$)
+{
+	my ($this) = @_;
+	return $this->Send ('DT');
+}
+
+
+sub RequestCounterLevel ($$)
+{
+	my ($this, $counter) = @_;
+	return $this->Send ('C?'.sprintf ('%02X', $counter));
+}
+
+
+sub RequestCbusLightingLevel ($$)
+{
+	my ($this, $group) = @_;
+
+	# CBUS lighting application levels are reflected in
+	# comfort counters, so request the level of the counter
+	# with the same value as the group.
+	#
+	# As a consequence of the comfort implementation,
+	# we can only request CBUS levels for the lighting application.
+	return $this->RequestCounterLevel ($group);
 }
 
 

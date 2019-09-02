@@ -373,7 +373,7 @@ while (! $terminated)
 		Print ("Requesting alarm state ...");
 		foreach my $output (keys %RETAIN_OUTPUT)
 		{
-			$comfort->Send (sprintf ('O?%02X', $output));
+			$comfort->RequestOutputValue ($output);
 		}
 
 		$comfort->RequestAlarmInformationReport();
@@ -537,11 +537,11 @@ sub MqttComfortCallback
 	{
 		if ($cmd eq 'date' && $n == 0)
 		{
-			$result = $comfort->Send ('DT');
+			$result = $comfort->RequestDateTime();
 		}
 		elsif ($cmd eq 'arm' && $n == 0)
 		{
-			$result = $comfort->Send ('M?');
+			$result = $comfort->RequestSecurityModeReport();
 		}
 	}
 
@@ -624,7 +624,7 @@ sub MqttCbusCallback
 	{
 		if (($cmd eq 'level' || $cmd eq 'switch') && $app == $comfort->CBUS_APPLICATION_LIGHTING)
 		{
-			$comfort->Send ('C?'.sprintf ('%02X', $group));
+			$comfort->RequestCbusLightingLevel ($group);
 		}
 	}
 	else
@@ -788,7 +788,7 @@ sub ComfortMDHandler
 	# to force a reset of all bypassed zones.
 	if ($armMode == $comfort->COMFORT_ARM_OFF)
 	{
-		$comfort->Send ('Z?');
+		$comfort->RequestInputReports();
 	}
 }
 

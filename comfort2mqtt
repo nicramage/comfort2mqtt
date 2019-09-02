@@ -48,14 +48,26 @@ use constant COMFORT2MQTT_STATUS_OFFLINE => 'offline';
 $0 = 'comfort2mqtt';
 
 our $daemon = 0;
+
+# Determines if unknown MQTT 'comfort/set' messages are passed
+# on to comfort.  Useful for trying new stuff, but should not
+# be enabled in production, as it allows arbitrary comfort
+# command execution.
+our $rawMsgsAllowed = 0;
+
 our $comfortPort;
 our $mqttHost;
 our $logFileName;
+
 while (my $arg = shift @ARGV)
 {
 	if ($arg eq '-d')
 	{
 		$daemon = 1;
+	}
+	elsif ($arg eq '-allow-raw-msgs')
+	{
+		$rawMsgsAllowed = 1;
 	}
 	elsif ($arg eq '-port')
 	{
@@ -528,9 +540,14 @@ sub MqttComfortCallback
 
 			$result = ArmToMode ($comfort, $mode);
 		}
+		elsif ($rawMsgsAllowed)
+		{
+			Print ("WARNING: Sending Unknown 'set' msg directly to comfort: $msg");
+			$result = $comfort->Send ($msg);
+		}
 		else
 		{
-			$result = $comfort->Send ($msg);
+			Print ("ERROR: Unknown 'set' msg, ignoring: $msg");
 		}
 	}
 	elsif ($op eq 'get')

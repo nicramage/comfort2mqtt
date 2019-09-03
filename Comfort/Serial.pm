@@ -217,6 +217,12 @@ our %MSG_TYPES =
 	'Z?' => [ '(A)*' ],
 );
 
+
+our %OBSERVE_MSG =
+(
+);
+
+
 our %keyLookup =
 (
 	'0'     => '00',
@@ -556,8 +562,14 @@ sub _ProcessMsg ($$)
 			my $mt = $MSG_TYPES{$type};
 			my $rt = $mt->[0];
 			my $fn = @$mt < 2 ? \&_ToHex : $mt->[1];
-
 			my @params = $fn->(unpack ($rt, $params));
+
+			# Call the registered observer, if there is one.
+			if (grep (/^$type$/, keys %OBSERVE_MSG))
+			{
+				$OBSERVE_MSG{$type} ($this, $type, @params);
+			}
+
 			$handled = $this->_CallMsgCallback ($type, @params);
 
 			if (! $handled)

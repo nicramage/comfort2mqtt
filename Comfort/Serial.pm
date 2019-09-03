@@ -564,7 +564,7 @@ sub _ProcessMsg ($$)
 			{
 				if (grep (/^$type$/, @REPORTS))
 				{
-					$this->_HandleReport ($type, $msg);
+					$this->_HandleReport ($type, $msg, @params);
 					$handled = 1;
 				}
 			}
@@ -589,13 +589,13 @@ sub _HandleAllZonesReport
 }
 
 
-sub _HandleReport ($$)
+sub _HandleReport ($$$@)
 {
-	my ($this, $type, @params) = @_;
+	my ($this, $type, $msg, @params) = @_;
 
 	if ($this->{REPORT_CALLBACK})
 	{
-		$this->{REPORT_CALLBACK} ($this, $type, @params);
+		$this->{REPORT_CALLBACK} ($this, $type, $msg, @params);
 	}
 }
 

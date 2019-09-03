@@ -464,15 +464,27 @@ sub Receive ($)
 
 			($handled, $type) = $this->_ProcessMsg ($msg);
 
-			if (!$handled || !$match)
+			# If it wasn't handled, then exit the loop and return
+			# the msg
+			if (!$handled)
 			{
-				$loopsLeft = 0;
-				$msg = '' if ($handled);
+				last;
 			}
-			else
+
+			# If was handled, and we didn't ask it to match anything
+			# then exit the loop and return the msg
+			if (!$match)
 			{
-				$loopsLeft = $waiting;
+				$msg = '';
+				last;
 			}
+
+			# The msg was handled, but we asked to match a msg
+			# (which it didn't, since we're here).
+			# Reset the timeout to the original timeout and try
+			# again (we must have received the response or report
+			# for something else)
+			$loopsLeft = $waiting;
 		}
 		else
 		{

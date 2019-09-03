@@ -824,9 +824,9 @@ sub SendCbusCommand ($$$$)
 		$groupWidth = 4;
 	}
 
-	my $result = $this->SendAndReceive ('DA',
-		sprintf ('C5%02X%0*X%02X%0*X%02XFF',
-			$this->{CBUS_UCM} + CBUS_UCM_BASE, $groupWidth, $group, $cmd, $levelWidth, $level, $app), 'RA');
+	my $msg = sprintf ('C5%02X%0*X%02X%0*X%02XFF',
+		$this->{CBUS_UCM} + CBUS_UCM_BASE, $groupWidth, $group, $cmd, $levelWidth, $level, $app);
+	my $result = $this->SendAndReceive ('DA', $msg, 'RA');
 
 	if ($result && $result eq 'RA00')
 	{

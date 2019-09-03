@@ -364,20 +364,20 @@ while (! $terminated)
 		# Start with all zone alarm types cleared
 		&ClearAlarmTypes();
 
-		$comfort->SetReportCallback ('a?', \&ComfortAlarmInformationHandler);
-		$comfort->SetReportCallback ('AL', \&ComfortALHandler);
-		$comfort->SetReportCallback ('CT', \&ComfortCTHandler);
-		$comfort->SetReportCallback ('C?', \&ComfortCTHandler);
-		$comfort->SetReportCallback ('DT', \&ComfortDTHandler);
-		$comfort->SetReportCallback ('IP', \&ComfortIPHandler);
-		$comfort->SetReportCallback ('OP', \&ComfortOPHandler);
-		$comfort->SetReportCallback ('O?', \&ComfortOPHandler);
-		$comfort->SetReportCallback ('MD', \&ComfortMDHandler);
-		$comfort->SetReportCallback ('M?', \&ComfortMDHandler);
-		$comfort->SetReportCallback ('AM', \&ComfortAMARHandler);
-		$comfort->SetReportCallback ('AR', \&ComfortAMARHandler);
-		$comfort->SetReportCallback ('EX', \&ComfortEXHandler);
-		$comfort->SetReportCallback ('PS', \&ComfortPSHandler);
+		$comfort->SetMsgCallback ('a?', \&ComfortAlarmInformationHandler);
+		$comfort->SetMsgCallback ('AL', \&ComfortALHandler);
+		$comfort->SetMsgCallback ('CT', \&ComfortCTHandler);
+		$comfort->SetMsgCallback ('C?', \&ComfortCTHandler);
+		$comfort->SetMsgCallback ('DT', \&ComfortDTHandler);
+		$comfort->SetMsgCallback ('IP', \&ComfortIPHandler);
+		$comfort->SetMsgCallback ('OP', \&ComfortOPHandler);
+		$comfort->SetMsgCallback ('O?', \&ComfortOPHandler);
+		$comfort->SetMsgCallback ('MD', \&ComfortMDHandler);
+		$comfort->SetMsgCallback ('M?', \&ComfortMDHandler);
+		$comfort->SetMsgCallback ('AM', \&ComfortAMARHandler);
+		$comfort->SetMsgCallback ('AR', \&ComfortAMARHandler);
+		$comfort->SetMsgCallback ('EX', \&ComfortEXHandler);
+		$comfort->SetMsgCallback ('PS', \&ComfortPSHandler);
 	}
 
 	if (! $alarmStateRequested && $reportsEnabled && $mqttConnected)

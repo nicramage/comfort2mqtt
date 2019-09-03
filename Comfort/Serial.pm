@@ -251,7 +251,7 @@ sub new ($$)
 	$this->{REPORT_CALLBACK} = undef;
 	$this->{LOG_CALLBACK} = undef;
 	$this->{INPUT_COUNT} = COMFORT_DEFAULT_INPUT_COUNT;
-	$this->{REPORT_CALLBACKS} =
+	$this->{MSG_CALLBACKS} =
 	{
 		'Z?' => \&_HandleAllZonesReport
 	};
@@ -299,10 +299,10 @@ sub SetLogger ($$)
 }
 
 
-sub SetReportCallback ($$)
+sub SetMsgCallback ($$)
 {
 	my ($this, $type, $callback) = @_;
-	$this->{REPORT_CALLBACKS}->{$type} = $callback;
+	$this->{MSG_CALLBACKS}->{$type} = $callback;
 }
 
 
@@ -497,19 +497,19 @@ sub _ToHex (@)
 }
 
 
-sub _CallReportCallback ($$$)
+sub _CallMsgCallback ($$$)
 {
 	my ($this, $type, $params) = @_;
 	my $handled = 0;
 
-	if (exists $MSG_TYPES{$type} && exists $this->{REPORT_CALLBACKS}->{$type})
+	if (exists $MSG_TYPES{$type} && exists $this->{MSG_CALLBACKS}->{$type})
 	{
 		my $mt = $MSG_TYPES{$type};
 		my $rt = $mt->[0];
 		my $fn = @$mt < 2 ? \&_ToHex : $mt->[1];
 
 		my @params = $fn->(unpack ($rt, $params));
-		$this->{REPORT_CALLBACKS}->{$type} ($this, $type, @params);
+		$this->{MSG_CALLBACKS}->{$type} ($this, $type, @params);
 		$handled = 1;
 	}
 
@@ -543,7 +543,7 @@ sub _ProcessMsg ($$)
 		$msg =~ /^(..)(.*)$/;
 		$type = $1;
 
-		$handled = $this->_CallReportCallback ($type, $2);
+		$handled = $this->_CallMsgCallback ($type, $2);
 		if (! $handled)
 		{
 			if (grep (/^$type$/, @REPORTS))
@@ -566,7 +566,7 @@ sub _HandleAllZonesReport
 	{
 		for (my $i = 0;  $i < 4 && $zone <= $this->{INPUT_COUNT};  ++$i, $zones >>= 1, ++$zone)
 		{
-			$this->_CallReportCallback ('IP', sprintf ('%02X%02X', $zone, $zones & 1));
+			$this->_CallMsgCallback ('IP', sprintf ('%02X%02X', $zone, $zones & 1));
 		}
 	}
 }

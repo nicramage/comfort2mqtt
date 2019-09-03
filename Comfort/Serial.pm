@@ -511,16 +511,11 @@ sub _ToHex (@)
 
 sub _CallMsgCallback ($$$)
 {
-	my ($this, $type, $params) = @_;
+	my ($this, $type, @params) = @_;
 	my $handled = 0;
 
-	if (exists $MSG_TYPES{$type} && exists $this->{MSG_CALLBACKS}->{$type})
+	if (exists $this->{MSG_CALLBACKS}->{$type})
 	{
-		my $mt = $MSG_TYPES{$type};
-		my $rt = $mt->[0];
-		my $fn = @$mt < 2 ? \&_ToHex : $mt->[1];
-
-		my @params = $fn->(unpack ($rt, $params));
 		$this->{MSG_CALLBACKS}->{$type} ($this, $type, @params);
 		$handled = 1;
 	}
@@ -554,14 +549,24 @@ sub _ProcessMsg ($$)
 	{
 		$msg =~ /^(..)(.*)$/;
 		$type = $1;
+		my $params = $2;
 
-		$handled = $this->_CallMsgCallback ($type, $2);
-		if (! $handled)
+		if (exists $MSG_TYPES{$type})
 		{
-			if (grep (/^$type$/, @REPORTS))
+			my $mt = $MSG_TYPES{$type};
+			my $rt = $mt->[0];
+			my $fn = @$mt < 2 ? \&_ToHex : $mt->[1];
+
+			my @params = $fn->(unpack ($rt, $params));
+			$handled = $this->_CallMsgCallback ($type, @params);
+
+			if (! $handled)
 			{
-				$this->_HandleReport ($type, $msg);
-				$handled = 1;
+				if (grep (/^$type$/, @REPORTS))
+				{
+					$this->_HandleReport ($type, $msg);
+					$handled = 1;
+				}
 			}
 		}
 	}
@@ -578,7 +583,7 @@ sub _HandleAllZonesReport
 	{
 		for (my $i = 0;  $i < 4 && $zone <= $this->{INPUT_COUNT};  ++$i, $zones >>= 1, ++$zone)
 		{
-			$this->_CallMsgCallback ('IP', sprintf ('%02X%02X', $zone, $zones & 1));
+			$this->_CallMsgCallback ('IP', $zone, $zones & 1);
 		}
 	}
 }

@@ -16,6 +16,8 @@ use constant COMFORT_PORT => '/dev/ttyUSB0';
 use constant COMFORT_PASSWORD => '0000';
 use constant COMFORT_RECEIVE_TIMEOUT => 100;
 use constant MQTT_HOST => 'localhost';
+use constant MQTT_USER => undef;
+use constant MQTT_PASSWORD => undef;
 use constant MQTT_COMFORT_PUBLISH_TOPIC => "comfort/status";
 use constant MQTT_COMFORT_SUBSCRIBE_SET => "comfort/set";
 use constant MQTT_COMFORT_SUBSCRIBE_GET => "comfort/get";
@@ -57,6 +59,8 @@ our $rawMsgsAllowed = 0;
 
 our $comfortPort;
 our $mqttHost;
+our $mqttUser;
+our $mqttPassword;
 our $logFileName;
 
 while (my $arg = shift @ARGV)
@@ -81,11 +85,21 @@ while (my $arg = shift @ARGV)
 	{
 		$mqttHost = shift @ARGV;
 	}
+	elsif ($arg eq '-user')
+	{
+		$mqttUser = shift @ARGV;
+	}
+	elsif ($arg eq '-password')
+	{
+		$mqttPassword = shift @ARGV;
+	}
 }
 
 
 $comfortPort //= COMFORT_PORT;
 $mqttHost //= MQTT_HOST;
+$mqttUser //= MQTT_USER;
+$mqttPassword //= MQTT_PASSWORD;
 our %RETAIN_INPUT =
 (
 	 9 => 1,
@@ -252,6 +266,14 @@ $| = 1;
 
 
 our $mqtt = Net::MQTT::Simple->new ($mqttHost);
+if ($mqttUser)
+{
+	# Hack for now to allow logic() to work.
+	# Need to implement SSL to be able to remove this
+	$ENV{MQTT_SIMPLE_ALLOW_INSECURE_LOGIN} = 1;
+	$mqtt->login ($mqttUser, $mqttPassword);
+}
+
 $mqtt->last_will (COMFORT2MQTT_STATUS_TOPIC, COMFORT2MQTT_STATUS_OFFLINE, 1);
 $mqtt->subscribe (MQTT_COMFORT_SUBSCRIBE_SET . '/#', \&MqttComfortCallback);
 $mqtt->subscribe (MQTT_COMFORT_SUBSCRIBE_GET . '/#', \&MqttComfortCallback);

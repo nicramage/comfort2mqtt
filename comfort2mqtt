@@ -296,6 +296,15 @@ $SIG{INT} = $SIG{QUIT} = $SIG{TERM} = sub
 };
 
 Print "===================================================================";
+Print "Configuration...";
+Print "  Device          : $comfortDevice";
+Print "  Comfort password: ", $comfortPassword ? 'Yes' : 'No';
+Print "  MQTT Host       : $mqttHost";
+Print "  MQTT User       : ", (!defined $mqttUser ? 'Not defined' : $mqttUser);
+Print "  MQTT Password   : ", (!defined $mqttPassword ? 'Not defined' : $mqttPassword ? 'Yes' : 'No');
+Print "  Raw msgs        : $rawMsgsAllowed";
+Print "  Retained inputs : ", join (' ', keys %RETAIN_INPUT);
+Print "-------------------------------------------------------------------";
 Print "Starting up ....";
 
 # Tell everyone we're offline, first

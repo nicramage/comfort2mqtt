@@ -12,7 +12,7 @@ use Time::HiRes qw ( gettimeofday );
 use Comfort::Serial;
 use Net::MQTT::Simple;
 
-use constant COMFORT_PORT => '/dev/ttyUSB0';
+use constant COMFORT_DEVICE => '/dev/ttyUSB0';
 use constant COMFORT_PASSWORD => '0000';
 use constant COMFORT_RECEIVE_TIMEOUT => 100;
 use constant MQTT_HOST => 'localhost';
@@ -57,7 +57,7 @@ our $daemon = 0;
 # command execution.
 our $rawMsgsAllowed = 0;
 
-our $comfortPort;
+our $comfortDevice;
 our $mqttHost;
 our $mqttUser;
 our $mqttPassword;
@@ -75,7 +75,7 @@ while (my $arg = shift @ARGV)
 	}
 	elsif ($arg eq '-port')
 	{
-		$comfortPort = shift @ARGV;
+		$comfortDevice = shift @ARGV;
 	}
 	elsif ($arg eq '-log')
 	{
@@ -96,7 +96,7 @@ while (my $arg = shift @ARGV)
 }
 
 
-$comfortPort //= COMFORT_PORT;
+$comfortDevice //= COMFORT_DEVICE;
 $mqttHost //= MQTT_HOST;
 $mqttUser //= MQTT_USER;
 $mqttPassword //= MQTT_PASSWORD;
@@ -113,8 +113,8 @@ our %RETAIN_OUTPUT =
 
 # The values of all retained topics sent out.
 our %RETAINED = ();
-our $comfort = Comfort::Serial->new ($comfortPort);
-our %rampLookup =
+our $comfort = Comfort::Serial->new ($comfortDevice);
+our %RAMP_LOOKUP =
 (
 	0  => $comfort->CBUS_RAMP_0,
 	4  => $comfort->CBUS_RAMP_4,
@@ -643,9 +643,9 @@ sub MqttCbusCallback
 				# the ramp period.
 				if ($cmd eq 'ramp' && $value =~ /,(\d+)$/)
 				{
-					if (exists $rampLookup{$1})
+					if (exists $RAMP_LOOKUP{$1})
 					{
-						$cbusCmd = $rampLookup{$1};
+						$cbusCmd = $RAMP_LOOKUP{$1};
 					}
 				}
 			}
@@ -1027,4 +1027,3 @@ sub ComfortResultHandler
 
 	SendMqttMsg ([ MQTT_COMFORT_PUBLISH_TOPIC, 'raw' ], $type, $msg, 0);
 }
-

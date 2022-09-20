@@ -316,10 +316,10 @@ while (! $terminated)
 	{
 		$loggedIn = 0;
 
-		Print ("Connecting to ", MQTT_HOST, " ...");
+		Print ("Connecting to Comfort system ...");
 		if (! $comfort->Connect())
 		{
-			Print "Coult no connect.  Retrying ...";
+			Print "Could not connect.  Retrying ...";
 			sleep (1);
 			next;
 		}
@@ -331,7 +331,7 @@ while (! $terminated)
 
 	if (! $loggedIn)
 	{
-		Print "Logging in ...";
+		Print "Logging in to Comfort system ...";
 		if (! $comfort->Login ($comfortPassword))
 		{
 			Print "Could not login.  Retrying ...";

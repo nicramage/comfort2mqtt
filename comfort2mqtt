@@ -470,6 +470,7 @@ while (! $terminated)
 			Print ("Comfort system idle for ", MAXIMUM_IDLE_TIME, " seconds, requesting alarm state...");
 
 			$comfort->RequestAlarmInformationReport();
+			$comfort->RequestSecurityModeReport();
 
 			# Make sure we only do this again after the idle time
 			$lastUpdateTime = time();

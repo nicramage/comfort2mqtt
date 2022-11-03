@@ -467,6 +467,14 @@ sub Receive ($)
 				}
 			}
 
+			# If we receive a 'NA' and we weren't expecting it (otherwise, it
+			# would have matched above), assume it is because we are no longer logged in
+			# and exit the loop.
+			if ($msg eq 'NA')
+			{
+				$this->{LOGGED_IN} = 0;
+				last;
+			}
 
 			($handled, $type) = $this->_ProcessMsg ($msg);
 
@@ -651,6 +659,13 @@ sub Logout ($)
 	}
 
 	return 1;
+}
+
+
+sub LoggedIn ($)
+{
+	my ($this) = @_;
+	return $this->{LOGGED_IN};
 }
 
 

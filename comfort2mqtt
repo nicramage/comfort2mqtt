@@ -283,6 +283,7 @@ our $mqttConnected = 0;
 our $onlineSent = 0;
 our $alarmStateRequested = 0;
 our $lastUpdateTime = 0;
+our $lastAlarmMode = -1;
 
 sub Print (@)
 {
@@ -855,10 +856,12 @@ sub ComfortMDHandler
 
 	# Request an update to all zone states on alarm disarm - we do this mainly
 	# to force a reset of all bypassed zones.
-	if ($armMode == $comfort->COMFORT_ARM_OFF)
+	if ($armMode == $comfort->COMFORT_ARM_OFF && $armMode != $lastAlarmMode)
 	{
 		$comfort->RequestInputReports();
 	}
+
+	$lastAlarmMode = $armMode;
 }
 
 

@@ -26,6 +26,7 @@ use constant MQTT_CBUS_SUBSCRIBE_SET => "cbus/set";
 use constant MQTT_CBUS_SUBSCRIBE_GET => "cbus/get";
 use constant MQTT_TICK_TIMEOUT => 100;
 use constant ALLOWED_TIME_DEVIATION => 2;
+use constant MAXIMUM_IDLE_TIME => 120;
 
 # AM/AR alarm parameter types
 use constant ALARM_NONE => 0;
@@ -281,6 +282,7 @@ our $adjustDateTime = 0;
 our $mqttConnected = 0;
 our $onlineSent = 0;
 our $alarmStateRequested = 0;
+our $lastUpdateTime = 0;
 
 sub Print (@)
 {
@@ -461,6 +463,17 @@ while (! $terminated)
 	if (! $terminated)
 	{
 		$mqtt->tick (MQTT_TICK_TIMEOUT/1000.0);
+
+		if ($connected && $loggedIn && (time() - $lastUpdateTime > MAXIMUM_IDLE_TIME))
+		{
+			# Comfort system has been idle for a while, re-request the alarm state.
+			Print ("Comfort system idle for ", MAXIMUM_IDLE_TIME, " seconds, requesting alarm state...");
+
+			$comfort->RequestAlarmInformationReport();
+
+			# Make sure we only do this again after the idle time
+			$lastUpdateTime = time();
+		}
 	}
 }
 
@@ -720,6 +733,8 @@ sub SendMqttMsg
 
 		$mqtt->publish ($topic => $value);
 	}
+
+	$lastUpdateTime = time();
 }
 
 

@@ -449,6 +449,15 @@ while (! $terminated)
 		}
 	}
 
+	# Check if we're still logged in
+	if ($loggedIn && ! $comfort->LoggedIn())
+	{
+		Print ("Logged out, re-logging in...");
+
+		# Log in again, enabling reports and getting the alarm state
+		$loggedIn = $reportsEnabled = $alarmStateRequested = 0;
+	}
+
 	if (! $terminated)
 	{
 		$mqtt->tick (MQTT_TICK_TIMEOUT/1000.0);

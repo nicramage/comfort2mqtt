@@ -40,6 +40,7 @@ use constant HASS_STATE_DISARMED  => 'disarmed';
 use constant HASS_STATE_AWAY      => 'armed_away';
 use constant HASS_STATE_HOME      => 'armed_home';
 use constant HASS_STATE_NIGHT     => 'armed_night';
+use constant HASS_STATE_VACATION  => 'armed_vacation';
 use constant HASS_STATE_PENDING   => 'pending';
 use constant HASS_STATE_TRIGGERED => 'triggered';
 
@@ -158,11 +159,10 @@ our %ALARM_STATE =
 our %HASS_ARM_STATE =
 (
 	$comfort->COMFORT_ARM_OFF       => HASS_STATE_DISARMED,
-#	$comfort->COMFORT_ARM_NIGHT     => HASS_STATE_NIGHT,
-#	$comfort->COMFORT_ARM_DAY       => HASS_STATE_HOME,
-	$comfort->COMFORT_ARM_NIGHT     => HASS_STATE_HOME,
+	$comfort->COMFORT_ARM_NIGHT     => HASS_STATE_NIGHT,
+	$comfort->COMFORT_ARM_DAY       => HASS_STATE_HOME,
 	$comfort->COMFORT_ARM_AWAY      => HASS_STATE_AWAY,
-	$comfort->COMFORT_ARM_VACATION  => HASS_STATE_AWAY,
+	$comfort->COMFORT_ARM_VACATION  => HASS_STATE_VACATION,
 );
 
 our %ENTRY_EXIT =

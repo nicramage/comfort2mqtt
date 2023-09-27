@@ -59,11 +59,11 @@ our $daemon = 0;
 # command execution.
 our $rawMsgsAllowed  = $ENV{COMFORT2MQTT_RAW_MSGS_ALLOWED} // 0;
 
-our $comfortDevice   = $ENV{COMFORT2MQTT_DEVICE}           //= COMFORT_DEVICE;
-our $comfortPassword = $ENV{COMFORT2MQTT_COMFORT_PASSWORD} //= COMFORT_PASSWORD;
-our $mqttHost        = $ENV{COMFORT2MQTT_MQTT_HOST}        //= MQTT_HOST;
-our $mqttUser        = $ENV{COMFORT2MQTT_MQTT_USER}        //= MQTT_USER;
-our $mqttPassword    = $ENV{COMFORT2MQTT_MQTT_PASSWORD}    //= MQTT_PASSWORD;
+our $comfortDevice   = $ENV{COMFORT2MQTT_DEVICE}           // COMFORT_DEVICE;
+our $comfortPassword = $ENV{COMFORT2MQTT_COMFORT_PASSWORD} // COMFORT_PASSWORD;
+our $mqttHost        = $ENV{COMFORT2MQTT_MQTT_HOST}        // MQTT_HOST;
+our $mqttUser        = $ENV{COMFORT2MQTT_MQTT_USER}        // MQTT_USER;
+our $mqttPassword    = $ENV{COMFORT2MQTT_MQTT_PASSWORD}    // MQTT_PASSWORD;
 our $logFileName;
 
 our %RETAIN_INPUT = map { $_ => 1 } split (/\s/m, $ENV{COMFORT2MQTT_RETAINED_INPUTS} //= '');

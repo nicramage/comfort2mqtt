@@ -376,7 +376,21 @@ sub Send ($$$@)
 {
 	my ($this, $cmd, $msg) = @_;
 
-	my $logMsg = $cmd . $msg;;
+	my $logMsg = $cmd;
+
+	# Do not log the password to the log file
+	if ($cmd eq 'LI')
+	{
+		# LI with no msg is a logout, so don't add the password
+		if (length ($msg) > 0)
+		{
+			$logMsg .= '****';
+		}
+	}
+	else
+	{
+		$logMsg .= $msg;
+	}
 
 	my $error = undef;
 	my $po = $this->{PORT_OBJECT};
